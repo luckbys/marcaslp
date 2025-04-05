@@ -9,6 +9,7 @@ import ContactForm from './components/ContactForm';
 function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
   const [timeLeft, setTimeLeft] = useState({
     days: 3,
     hours: 12,
@@ -29,6 +30,19 @@ function App() {
     
     return () => {
       window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
+
+  // Efeito para o parallax
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
     };
   }, []);
 
@@ -155,7 +169,7 @@ function App() {
                   src="https://legadomarcas.com.br/wp-content/uploads/2021/01/cropped-LEGADO-Marcas-e-Patentes_Marca-Copmpleta-Color-Vert_Marca-Copmpleta-Color-Vert-1-1.png" 
                   alt="Legado Marcas e Patentes"
                   className="h-14 md:h-16 w-auto object-contain"
-                  loading="eager"
+                  loading="lazy"
                   width="180" 
                   height="64"
                 />
@@ -213,27 +227,41 @@ function App() {
         )}
       </header>
 
-      {/* Hero Section Minimalista */}
+      {/* Hero Section com Parallax */}
       <main>
         <section
           id="home"
-          className="hero-minimalista"
-          style={{ 
-            backgroundImage: "url('https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=2070&auto=format&fit=crop')", 
-          }}
+          className="hero-minimalista relative overflow-hidden"
           aria-label="Seção principal"
           role="banner"
         >
+          {/* Background com parallax */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center z-0" 
+            style={{ 
+              backgroundImage: "url('https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=2070&auto=format&fit=crop')",
+              transform: `translateY(${scrollY * 0.4}px)`,
+              backgroundAttachment: "fixed"
+            }}
+          ></div>
+          
           {/* Overlay simples */}
           <div className="hero-overlay"></div>
           
-          {/* Marca d'água R */}
-          <div className="hero-watermark right-1/4 top-1/2 transform -translate-y-1/2" aria-hidden="true">
+          {/* Marca d'água R com efeito parallax mais intenso */}
+          <div 
+            className="hero-watermark right-1/4 top-1/2 transform -translate-y-1/2" 
+            style={{ transform: `translate(-50%, -50%) translateY(${scrollY * 0.2}px)` }}
+            aria-hidden="true"
+          >
             ®
           </div>
           
-          {/* Conteúdo */}
-          <div className="container mx-auto px-6 relative z-10">
+          {/* Conteúdo com leve efeito de parallax */}
+          <div 
+            className="container mx-auto px-6 relative z-10 py-32 md:py-48"
+            style={{ transform: `translateY(${scrollY * -0.1}px)` }}
+          >
             <div className="max-w-2xl">
               {/* Logo/Título */}
               <h1 className="hero-title">
@@ -305,7 +333,30 @@ function App() {
           </div>
         </div>
       </section>
+{/* PartnersCarousel */}
+<section id="parceiros">
+          <PartnersCarousel />
+        </section>
 
+        {/* Seção Credenciamento INPI */}
+        <section id="credenciamento" className="py-12 bg-white"> {/* Fundo branco e padding */}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-center items-center space-x-6 md:space-x-8"> {/* Centraliza e espaça os itens */}
+              <span className="text-gray-500 uppercase tracking-wider font-semibold text-sm md:text-base">
+                Empresa Credenciada
+              </span>
+              {/* Placeholder para o logo do INPI - Substitua 'URL_LOGO_INPI' pela URL real */}
+              <img
+                loading="lazy" 
+                src="https://legadomarcas.com.br/wp-content/uploads/2021/01/Legado_Marcas_e_Patentes_INPI.png" 
+                alt="Logo INPI - Instituto Nacional da Propriedade Industrial"
+                className="h-10 md:h-12 w-auto"
+                width="300"
+                height="78"
+              />
+            </div>
+          </div>
+        </section>
         {/* Desenvolvimento - Parte 2: Vantagens (anteriormente Diferenciais) */}
         <section id="vantagens" className="py-20 bg-gray-100"> {/* Fundo cinza claro */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -476,6 +527,8 @@ function App() {
                   src="https://legadomarcas.com.br/wp-content/uploads/2021/01/Banner-topo.png"
                   alt="Ilustração sobre proteção de marca"
                   className="rounded-lg shadow-lg mx-auto"
+                  width="600"
+                  height="300"
                 />
               </div>
             </div>
@@ -568,27 +621,7 @@ function App() {
         {/* Seção de Vídeos e Depoimentos */}
         <VideoTestimonialSection />
 
-        {/* PartnersCarousel */}
-        <section id="parceiros">
-          <PartnersCarousel />
-        </section>
-
-        {/* Seção Credenciamento INPI */}
-        <section id="credenciamento" className="py-12 bg-white"> {/* Fundo branco e padding */}
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-center items-center space-x-6 md:space-x-8"> {/* Centraliza e espaça os itens */}
-              <span className="text-gray-500 uppercase tracking-wider font-semibold text-sm md:text-base">
-                Empresa Credenciada
-              </span>
-              {/* Placeholder para o logo do INPI - Substitua 'URL_LOGO_INPI' pela URL real */}
-              <img
-                src="https://legadomarcas.com.br/wp-content/uploads/2021/01/Legado_Marcas_e_Patentes_INPI.png" 
-                alt="Logo INPI - Instituto Nacional da Propriedade Industrial"
-                className="h-10 md:h-12" /* Ajuste a altura conforme necessário */
-              />
-            </div>
-          </div>
-        </section>
+        
 
         {/* Conclusão - Section de Contato */}
         <section id="contato" className="bg-gradient-to-br from-blue-900 to-blue-800 text-white py-12 relative overflow-hidden">
@@ -774,6 +807,50 @@ function App() {
               </ul>
             </div>
           </div>
+          
+          {/* Reclame Aqui - Versão Redesenhada */}
+          <div className="my-10 flex flex-col items-center justify-center">
+            <div className="bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 p-0.5 rounded-xl shadow-lg max-w-sm w-full">
+              <div className="bg-gray-900 rounded-xl p-5 transition-all duration-300 group hover:bg-gray-800/80">
+                <div className="flex flex-col items-center">
+                  {/* Título com ícone */}
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="text-green-400 animate-pulse">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                        <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <p className="text-white font-medium">Confira nossa reputação:</p>
+                  </div>
+                  
+                  {/* Imagem com efeito de brilho no hover */}
+                  <div className="relative overflow-hidden rounded-lg transition-all duration-300 transform group-hover:scale-105">
+                    {/* Efeito de brilho */}
+                    <div className="absolute -inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-green-400/0 via-green-400/20 to-green-400/0 blur-sm transform -skew-x-12 -translate-x-full group-hover:translate-x-[400%] transition-all duration-1500 ease-in-out"></div>
+                    
+                    <a 
+                      href="https://www.reclameaqui.com.br/empresa/legado-marcas-e-patentes/" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      aria-label="Legado Marcas e Patentes no Reclame Aqui"
+                      className="block"
+                    >
+                      <img 
+                        loading="lazy" 
+                        decoding="async" 
+                        width="318" 
+                        height="68" 
+                        src="https://legadomarcas.com.br/wp-content/uploads/2021/01/Screenshot_2.png" 
+                        alt="Legado Marcas e Patentes no Reclame Aqui"
+                        className="w-full h-auto object-contain transition-transform duration-500 group-hover:brightness-110"
+                      />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <div className="border-t border-gray-800 pt-8 text-center">
             <p className="text-sm">
                 © {new Date().getFullYear()} Legado Marcas. Todos os direitos reservados.
