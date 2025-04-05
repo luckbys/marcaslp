@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+
+# Permitir todos os rastreadores
+User-agent: Googlebot
+Allow: /
+User-agent: Googlebot-Image
+Allow: /
+User-agent: Googlebot-Mobile
+Allow: /
+User-agent: Bingbot
+Allow: /
+User-agent: Slurp
+Allow: /
+
+# Sitemap
+Sitemap: https://legadomarcas.com.br/sitemap.xml
+
+# Taxa de rastreamento
+Crawl-delay: 10 

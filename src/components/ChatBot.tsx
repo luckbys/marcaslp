@@ -27,7 +27,7 @@ interface ChatBotProps {
 }
 
 // Limite de caracteres por card
-const CARD_CHAR_LIMIT = 250;
+const CARD_CHAR_LIMIT = 200;
 
 const ChatBot: React.FC<ChatBotProps> = ({ 
   webhookUrl, 
@@ -422,6 +422,14 @@ const ChatBot: React.FC<ChatBotProps> = ({
     return isLastInSeries;
   };
 
+  // Ajustar a animação de entrada das mensagens para uma transição mais suave
+  const messageSlideAnimation = `
+    @keyframes messageSlide {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  `;
+
   return (
     <div className="fixed bottom-4 right-4 z-50">
       {/* Botão para abrir/fechar o chat */}
@@ -489,8 +497,8 @@ const ChatBot: React.FC<ChatBotProps> = ({
               const isSeriesContinuation = msg.isPartOfSeries && index > 0 && 
                 messages[index - 1].seriesId === msg.seriesId;
               
-              // Aplicar espaçamento menor entre mensagens da mesma série
-              const messageSpacing = isSeriesContinuation ? "mb-1" : "mb-3";
+              // Ajustar o layout das mensagens para melhor espaçamento e legibilidade
+              const messageSpacing = isSeriesContinuation ? "mb-2" : "mb-4";
               
               // Estilo de borda para mensagens em série
               const borderStyle = isSeriesContinuation
@@ -630,10 +638,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
           to { opacity: 1; transform: translateY(0); }
         }
         
-        @keyframes messageSlide {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
+        ${messageSlideAnimation}
         
         /* Melhorias para formatação de texto */
         .text-sm p {
