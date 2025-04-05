@@ -3,5 +3,23 @@
   "clean_urls": true,
   "routes": {
     "/**": "index.html"
+  },
+  "https_only": true,
+  "headers": {
+    "/**": {
+      "Cache-Control": "public, max-age=31536000",
+      "X-Frame-Options": "DENY"
+    },
+    "/**.js": {
+      "Content-Type": "application/javascript",
+      "Cache-Control": "public, max-age=31536000"
+    },
+    "/**.mjs": {
+      "Content-Type": "application/javascript",
+      "Cache-Control": "public, max-age=31536000"
+    },
+    "/**.css": {
+      "Cache-Control": "public, max-age=31536000"
+    }
   }
 } 
