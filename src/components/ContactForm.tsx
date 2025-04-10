@@ -1,6 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { FileCheck, Loader2, Mail, Check, AlertTriangle } from 'lucide-react';
-import emailjs from '@emailjs/browser';
 
 const ContactForm = () => {
   const [formData, setFormData] = useState({
@@ -20,8 +19,18 @@ const ContactForm = () => {
   } | null>(null);
   
   const formRef = useRef<HTMLFormElement>(null);
+  const webhookUrl = import.meta.env.VITE_CONTACT_WEBHOOK_URL;
 
-  // Função para lidar com mudanças nos campos do formulário
+  useEffect(() => {
+    if (!webhookUrl) {
+      console.error('VITE_CONTACT_WEBHOOK_URL não está definida nas variáveis de ambiente');
+      setStatusEnvio({
+        sucesso: false,
+        mensagem: 'O formulário de contato não está configurado corretamente. Por favor, entre em contato por telefone.'
+      });
+    }
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
     setFormData(prevData => ({
@@ -30,19 +39,12 @@ const ContactForm = () => {
     }));
   };
   
-  // Formatação de telefone enquanto digita
   const formatTelefone = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, '');
     
     if (value.length > 0) {
-      // Formatar como (XX) XXXXX-XXXX ou (XX) XXXX-XXXX dependendo do comprimento
-      if (value.length <= 10) {
-        value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
-        value = value.replace(/(\d)(\d{4})$/, '$1-$2');
-      } else {
-        value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
-        value = value.replace(/(\d)(\d{4})$/, '$1-$2');
-      }
+      value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
+      value = value.replace(/(\d)(\d{4})$/, '$1-$2');
     }
     
     setFormData(prevData => ({
@@ -51,59 +53,44 @@ const ContactForm = () => {
     }));
   };
   
-  // Função para enviar o formulário usando EmailJS
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formRef.current) return;
+    if (!formRef.current || !webhookUrl) {
+      setStatusEnvio({
+        sucesso: false,
+        mensagem: 'O formulário de contato não está configurado corretamente. Por favor, entre em contato por telefone.'
+      });
+      return;
+    }
     
     try {
       setEnviando(true);
       setStatusEnvio(null);
       
-      // Usar as variáveis de ambiente para as credenciais do EmailJS
-      const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
-      const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
-      const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
-      
-      // Verificar se as credenciais estão definidas
-      if (!serviceId || !templateId || !publicKey) {
-        console.error('Credenciais do EmailJS não configuradas:', { 
-          serviceId: serviceId ? 'definido' : 'indefinido', 
-          templateId: templateId ? 'definido' : 'indefinido', 
-          publicKey: publicKey ? 'definido' : 'indefinido' 
-        });
-        throw new Error('Credenciais do EmailJS não configuradas corretamente.');
-      }
-      
-      // Log para debug antes do envio (sem mostrar dados sensíveis)
-      console.log('Enviando email com os parâmetros:', { 
-        serviceId, 
-        templateId,
-        publicKeyLength: publicKey?.length || 0,
-        formDataKeys: Object.keys(formData)
-      });
-      
-      // Preparando os dados - incluindo assunto personalizado se for selecionado "outro"
-      const emailData = {
-        from_name: formData.nome,
-        from_email: formData.email,
-        from_phone: formData.telefone,
-        subject: formData.assunto === 'outro' ? formData.assuntoPersonalizado : formData.assunto,
-        message: formData.mensagem
+      // Dados simplificados para o webhook
+      const dadosContato = {
+        nome: formData.nome,
+        email: formData.email,
+        telefone: formData.telefone,
+        assunto: formData.assunto === 'outro' ? formData.assuntoPersonalizado : formData.assunto,
+        mensagem: formData.mensagem
       };
       
-      // Inicialização do EmailJS
-      emailjs.init(publicKey);
+      console.log('Enviando dados para o webhook:', dadosContato);
       
-      const result = await emailjs.send(
-        serviceId,
-        templateId,
-        emailData
-      );
-      
-      console.log('Email enviado!', result.text);
-      
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(dadosContato)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro na requisição: ${response.status}`);
+      }
+
       // Limpar o formulário após envio bem-sucedido
       setFormData({
         nome: '',
@@ -113,34 +100,20 @@ const ContactForm = () => {
         assuntoPersonalizado: '',
         mensagem: ''
       });
-      
+
       setStatusEnvio({
         sucesso: true,
         mensagem: 'Mensagem enviada com sucesso! Em breve entraremos em contato.'
       });
-      
-      // Scroll para o topo do form para mostrar a mensagem de sucesso
-      formRef.current.scrollIntoView({ behavior: 'smooth' });
-      
+
     } catch (error) {
-      console.error('Erro ao enviar email:', error);
-      
-      // Mensagem de erro mais específica
-      const errorMessage = error instanceof Error 
-        ? `Erro: ${error.message}`
-        : 'Ocorreu um erro ao enviar sua mensagem.';
-      
+      console.error('Erro ao enviar mensagem:', error);
       setStatusEnvio({
         sucesso: false,
-        mensagem: `${errorMessage} Por favor, verifique seus dados e tente novamente ou entre em contato por telefone.`
+        mensagem: 'Ocorreu um erro ao enviar sua mensagem. Por favor, tente novamente ou entre em contato por telefone.'
       });
     } finally {
       setEnviando(false);
-      
-      // Remover a mensagem de status após 7 segundos
-      setTimeout(() => {
-        setStatusEnvio(null);
-      }, 7000);
     }
   };
 
@@ -150,7 +123,6 @@ const ContactForm = () => {
         <FileCheck className="w-5 h-5 text-yellow-400" /> Formulário de Contato
       </h3>
       
-      {/* Alerta de status com animação */}
       {statusEnvio && (
         <div 
           className={`mb-4 p-3 rounded-lg border ${
@@ -167,9 +139,8 @@ const ContactForm = () => {
         </div>
       )}
       
-      <form ref={formRef} className="space-y-3" onSubmit={handleSubmit}>
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
         <div className="grid md:grid-cols-3 gap-3">
-          {/* Nome */}
           <div className="relative md:col-span-1">
             <label 
               htmlFor="nome" 
@@ -197,7 +168,6 @@ const ContactForm = () => {
             />
           </div>
           
-          {/* Email */}
           <div className="relative md:col-span-1">
             <label 
               htmlFor="email"
@@ -230,7 +200,6 @@ const ContactForm = () => {
             </div>
           </div>
           
-          {/* Telefone */}
           <div className="relative md:col-span-1">
             <label 
               htmlFor="telefone" 
@@ -260,7 +229,6 @@ const ContactForm = () => {
           </div>
         </div>
         
-        {/* Assunto */}
         <div className="relative">
           <label 
             htmlFor="assunto" 
@@ -294,7 +262,6 @@ const ContactForm = () => {
             <option value="outro">Outro assunto</option>
           </select>
           
-          {/* Campo adicional que aparece se "Outro" for selecionado */}
           {formData.assunto === 'outro' && (
             <div className="mt-2">
               <input
@@ -317,8 +284,7 @@ const ContactForm = () => {
           )}
         </div>
         
-        {/* Mensagem */}
-        <div>
+        <div className="relative">
           <label 
             htmlFor="mensagem" 
             className={`block text-xs transition-all duration-200 mb-1 ${
@@ -344,7 +310,6 @@ const ContactForm = () => {
           ></textarea>
         </div>
         
-        {/* Consentimento LGPD */}
         <div>
           <label className="flex items-start gap-2 cursor-pointer">
             <input 
@@ -361,8 +326,7 @@ const ContactForm = () => {
           </label>
         </div>
         
-        {/* Botão de Envio */}
-        <div className="pt-1">
+        <div>
           <button
             type="submit"
             disabled={enviando}

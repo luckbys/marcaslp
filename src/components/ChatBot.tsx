@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, X, MessageSquare, User, Bot, Trash2, Volume2, RefreshCw, ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react';
+import { Send, X, MessageSquare, User, Bot, Trash2, Volume2, RefreshCw, ThumbsUp, ThumbsDown, Loader2, ArrowDown } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -44,10 +44,11 @@ const ChatBot: React.FC<ChatBotProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [unreadMessages, setUnreadMessages] = useState<number>(0);
   const [isFirstInteraction, setIsFirstInteraction] = useState<boolean>(true);
+  const [showScrollButton, setShowScrollButton] = useState<boolean>(false);
+  const [isScrolledToBottom, setIsScrolledToBottom] = useState<boolean>(true);
   
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Ações rápidas - perguntas frequentes
   const quickActions: QuickAction[] = [
@@ -100,7 +101,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
 
   // Auto-scroll para a mensagem mais recente
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    chatContainerRef.current?.scrollIntoView({ behavior: 'smooth' });
     
     // Atualizar contagem de mensagens não lidas
     if (!isOpen && messages.length > 0) {
@@ -123,6 +124,34 @@ const ChatBot: React.FC<ChatBotProps> = ({
       }
     }
   }, [isOpen]);
+
+  // Função para verificar se o usuário está no final do chat
+  const handleScroll = () => {
+    if (chatContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+      const isAtBottom = scrollHeight - scrollTop <= clientHeight + 50;
+      setIsScrolledToBottom(isAtBottom);
+      setShowScrollButton(!isAtBottom);
+    }
+  };
+
+  // Função para rolar suavemente até o final (apenas quando o botão é clicado)
+  const scrollToBottom = () => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      setIsScrolledToBottom(true);
+      setShowScrollButton(false);
+    }
+  };
+
+  // Adicionar listener de scroll
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
 
   // Função para formatar o texto com quebras de linha, parágrafos e listas
   const formatMessage = (text: string) => {
@@ -462,7 +491,6 @@ const ChatBot: React.FC<ChatBotProps> = ({
       {/* Janela do chat - com animação de fade in/out */}
       {isOpen && (
         <div 
-          ref={chatContainerRef}
           className="absolute bottom-16 right-0 w-80 sm:w-96 bg-white rounded-lg shadow-xl flex flex-col overflow-hidden border border-gray-200 animate-fadeIn"
           style={{ animation: 'fadeIn 0.3s ease-out' }}
         >
@@ -495,7 +523,11 @@ const ChatBot: React.FC<ChatBotProps> = ({
           </div>
 
           {/* Mensagens */}
-          <div className="flex-1 p-4 overflow-y-auto max-h-96 bg-gray-50">
+          <div 
+            className="flex-1 p-4 overflow-y-auto max-h-96 bg-gray-50"
+            onScroll={handleScroll}
+            ref={chatContainerRef}
+          >
             {error && (
               <div className="bg-red-100 text-red-800 p-3 rounded-lg mb-3 text-sm">
                 {error}
@@ -587,7 +619,17 @@ const ChatBot: React.FC<ChatBotProps> = ({
                 </div>
               </div>
             )}
-            <div ref={messagesEndRef} />
+            
+            {/* Botão de rolagem para baixo */}
+            {showScrollButton && (
+              <button
+                onClick={scrollToBottom}
+                className="fixed bottom-24 right-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-2 shadow-lg transition-all duration-300 hover:scale-110 z-50"
+                aria-label="Rolar para baixo"
+              >
+                <ArrowDown className="w-5 h-5" />
+              </button>
+            )}
           </div>
 
           {/* Botões de ação rápida, visíveis apenas no início da conversa */}
@@ -697,6 +739,11 @@ const ChatBot: React.FC<ChatBotProps> = ({
         /* Ajustes para mensagens do usuário */
         .bg-blue-500 .text-sm ul {
           color: white;
+        }
+
+        /* Estilo para o botão de rolagem */
+        .scroll-button {
+          animation: fadeIn 0.3s ease-out;
         }
       `}</style>
     </div>

@@ -336,7 +336,7 @@ function App() {
 {/* PartnersCarousel */}
 <section id="parceiros">
           <PartnersCarousel />
-        </section>
+      </section>
 
         {/* Seção Credenciamento INPI */}
         <section id="credenciamento" className="py-12 bg-white"> {/* Fundo branco e padding */}
@@ -541,9 +541,9 @@ function App() {
               <button className="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold py-4 px-8 rounded-lg text-lg transition-all shadow-md">
                 SOLICITAR ORÇAMENTO
               </button>
-            </div>
           </div>
-        </section>
+        </div>
+      </section>
 
       {/* Desenvolvimento - Parte 3: Processo */}
         <section id="processo" className="py-20 bg-white">
