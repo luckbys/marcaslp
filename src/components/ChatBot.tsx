@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, X, MessageSquare, User, Bot, Trash2, Volume2, RefreshCw, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Send, X, MessageSquare, User, Bot, Trash2, Volume2, RefreshCw, ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -18,7 +18,7 @@ interface QuickAction {
 }
 
 interface ChatBotProps {
-  webhookUrl: string;
+  webhookUrl?: string;
   botName?: string;
   initialMessage?: string;
   primaryColor?: string;
@@ -76,8 +76,8 @@ const ChatBot: React.FC<ChatBotProps> = ({
   // Verificar se a URL do webhook está definida
   useEffect(() => {
     if (!webhookUrl) {
-      console.error('URL do webhook não está definida! Configure a variável de ambiente VITE_WEBHOOK_URL.');
-      setError('Configuração incompleta. Entre em contato com o suporte.');
+      console.error('VITE_WEBHOOK_URL não está definida nas variáveis de ambiente');
+      setError('Configuração do chat não está completa. Por favor, entre em contato por outros meios.');
     } else {
       setError(null);
     }
@@ -128,35 +128,34 @@ const ChatBot: React.FC<ChatBotProps> = ({
   const formatMessage = (text: string) => {
     if (!text) return '';
 
-    // Substituir quebras de linha duplas por tags de parágrafo
+    // Tratar markdown
     let formattedText = text
-      .replace(/\n\n+/g, '</p><p>')
-      .replace(/\n/g, '<br />');
-    
-    // Identificar listas com marcadores
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Negrito
+      .replace(/\*(.*?)\*/g, '<em>$1</em>') // Itálico
+      .replace(/\n\s*\n/g, '</p><p>') // Parágrafos
+      .replace(/\n/g, '<br>'); // Quebras de linha simples
+
+    // Identificar e formatar listas numeradas e com marcadores
     formattedText = formattedText
-      .replace(/• (.*?)(?=<br \/>|<\/p>|$)/g, '<li>$1</li>')
-      .replace(/- (.*?)(?=<br \/>|<\/p>|$)/g, '<li>$1</li>');
-    
+      .replace(/(\d+\.\s+)(.*?)(?=<br>|<\/p>|$)/g, '<li class="list-decimal">$2</li>') // Lista numerada
+      .replace(/(\•|\-|\*)\s+(.*?)(?=<br>|<\/p>|$)/g, '<li class="list-disc">$2</li>'); // Lista com marcadores
+
     // Agrupar itens de lista
-    if (formattedText.includes('<li>')) {
+    if (formattedText.includes('<li')) {
+      formattedText = '<ul class="pl-4 space-y-1">' + formattedText + '</ul>';
       formattedText = formattedText
-        .replace(/<li>/g, '<ul><li>')
-        .replace(/<\/li>/g, '</li></ul>');
-      
-      // Remover tags ul duplicadas entre itens
-      formattedText = formattedText
-        .replace(/<\/ul><ul>/g, '');
+        .replace(/<\/ul><br><ul[^>]*>/g, '') // Remover quebras entre itens de lista
+        .replace(/<br><li/g, '<li'); // Remover quebras antes de itens
     }
-    
-    // Envolver em parágrafo se ainda não estiver
-    if (!formattedText.startsWith('<p>')) {
+
+    // Garantir que o texto esteja envolvido em parágrafos
+    if (!formattedText.startsWith('<p>') && !formattedText.startsWith('<ul>')) {
       formattedText = '<p>' + formattedText;
     }
-    if (!formattedText.endsWith('</p>')) {
+    if (!formattedText.endsWith('</p>') && !formattedText.endsWith('</ul>')) {
       formattedText = formattedText + '</p>';
     }
-    
+
     return formattedText;
   };
 
@@ -315,23 +314,34 @@ const ChatBot: React.FC<ChatBotProps> = ({
       // Processar a resposta do servidor que pode vir em diferentes formatos
       let responseText = "";
       
-      // Formato 1: { response: "texto" }
-      if (data && data.response) {
+      // Formato 1: { output: "texto" }
+      if (data && data.output) {
+        responseText = data.output;
+      }
+      // Formato 2: { response: "texto" }
+      else if (data && data.response) {
         responseText = data.response;
       } 
-      // Formato 2: [{ resposta: "texto" }]
+      // Formato 3: [{ resposta: "texto" }]
       else if (Array.isArray(data) && data.length > 0 && data[0].resposta) {
         responseText = data[0].resposta;
       } 
-      // Formato 3: { resposta: "texto" } (sem array)
+      // Formato 4: { resposta: "texto" } (sem array)
       else if (data && data.resposta) {
         responseText = data.resposta;
       }
       // Outros formatos desconhecidos
       else {
         console.warn('Formato de resposta desconhecido:', data);
-        responseText = "Recebi sua mensagem e estou processando. Como posso ajudar?";
+        responseText = "Desculpe, houve um erro ao processar sua mensagem. Por favor, tente novamente.";
       }
+      
+      // Tratar markdown básico
+      responseText = responseText
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Negrito
+        .replace(/\*(.*?)\*/g, '<em>$1</em>') // Itálico
+        .replace(/\n\s*\n/g, '</p><p>') // Parágrafos
+        .replace(/\n/g, '<br>'); // Quebras de linha simples
       
       console.log('Texto extraído para exibição:', responseText);
       
@@ -642,7 +652,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
         
         /* Melhorias para formatação de texto */
         .text-sm p {
-          margin-bottom: 0.5rem;
+          margin-bottom: 0.75rem;
         }
         
         .text-sm p:last-child {
@@ -650,14 +660,43 @@ const ChatBot: React.FC<ChatBotProps> = ({
         }
         
         .text-sm ul {
-          margin-top: 0.25rem;
-          margin-bottom: 0.5rem;
-          padding-left: 1rem;
+          margin: 0.5rem 0;
+          padding-left: 1.25rem;
         }
         
         .text-sm li {
-          margin-bottom: 0.25rem;
-          list-style-type: disc;
+          margin-bottom: 0.375rem;
+          position: relative;
+        }
+
+        .text-sm li.list-disc::before {
+          content: "•";
+          position: absolute;
+          left: -1rem;
+          color: currentColor;
+        }
+
+        .text-sm li.list-decimal {
+          list-style-type: decimal;
+          margin-left: 0.5rem;
+        }
+
+        .text-sm strong {
+          font-weight: 600;
+        }
+
+        .text-sm em {
+          font-style: italic;
+        }
+
+        /* Ajustes para mensagens do bot */
+        .bg-white .text-sm ul {
+          color: #374151;
+        }
+
+        /* Ajustes para mensagens do usuário */
+        .bg-blue-500 .text-sm ul {
+          color: white;
         }
       `}</style>
     </div>

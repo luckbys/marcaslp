@@ -68,20 +68,38 @@ const ContactForm = () => {
       
       // Verificar se as credenciais estão definidas
       if (!serviceId || !templateId || !publicKey) {
-        throw new Error('Credenciais do EmailJS não configuradas.');
+        console.error('Credenciais do EmailJS não configuradas:', { 
+          serviceId: serviceId ? 'definido' : 'indefinido', 
+          templateId: templateId ? 'definido' : 'indefinido', 
+          publicKey: publicKey ? 'definido' : 'indefinido' 
+        });
+        throw new Error('Credenciais do EmailJS não configuradas corretamente.');
       }
+      
+      // Log para debug antes do envio (sem mostrar dados sensíveis)
+      console.log('Enviando email com os parâmetros:', { 
+        serviceId, 
+        templateId,
+        publicKeyLength: publicKey?.length || 0,
+        formDataKeys: Object.keys(formData)
+      });
       
       // Preparando os dados - incluindo assunto personalizado se for selecionado "outro"
       const emailData = {
-        ...formData,
-        assuntoFinal: formData.assunto === 'outro' ? formData.assuntoPersonalizado : formData.assunto
+        from_name: formData.nome,
+        from_email: formData.email,
+        from_phone: formData.telefone,
+        subject: formData.assunto === 'outro' ? formData.assuntoPersonalizado : formData.assunto,
+        message: formData.mensagem
       };
+      
+      // Inicialização do EmailJS
+      emailjs.init(publicKey);
       
       const result = await emailjs.send(
         serviceId,
         templateId,
-        emailData,
-        publicKey
+        emailData
       );
       
       console.log('Email enviado!', result.text);
@@ -106,9 +124,15 @@ const ContactForm = () => {
       
     } catch (error) {
       console.error('Erro ao enviar email:', error);
+      
+      // Mensagem de erro mais específica
+      const errorMessage = error instanceof Error 
+        ? `Erro: ${error.message}`
+        : 'Ocorreu um erro ao enviar sua mensagem.';
+      
       setStatusEnvio({
         sucesso: false,
-        mensagem: 'Ocorreu um erro ao enviar sua mensagem. Por favor, tente novamente mais tarde.'
+        mensagem: `${errorMessage} Por favor, verifique seus dados e tente novamente ou entre em contato por telefone.`
       });
     } finally {
       setEnviando(false);
