@@ -228,10 +228,10 @@ function App() {
       </header>
 
       {/* Hero Section com Parallax */}
-      <main>
+      <main className="pt-16 md:pt-0">
         <section
           id="home"
-          className="hero-minimalista relative overflow-hidden"
+          className="hero-minimalista relative overflow-hidden min-h-[80vh] md:min-h-screen"
           aria-label="Seção principal"
           role="banner"
         >
@@ -240,8 +240,8 @@ function App() {
             className="absolute inset-0 bg-cover bg-center z-0" 
             style={{ 
               backgroundImage: "url('https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=2070&auto=format&fit=crop')",
-              transform: `translateY(${scrollY * 0.4}px)`,
-              backgroundAttachment: "fixed"
+              transform: !isMobile ? `translateY(${scrollY * 0.4}px)` : 'none',
+              backgroundAttachment: isMobile ? 'scroll' : 'fixed'
             }}
           ></div>
           
@@ -259,21 +259,21 @@ function App() {
           
           {/* Conteúdo com leve efeito de parallax */}
           <div 
-            className="container mx-auto px-6 relative z-10 py-32 md:py-48"
-            style={{ transform: `translateY(${scrollY * -0.1}px)` }}
+            className="container mx-auto px-4 md:px-6 relative z-10 py-20 md:py-32"
+            style={{ transform: !isMobile ? `translateY(${scrollY * -0.1}px)` : 'none' }}
           >
             <div className="max-w-2xl">
               {/* Logo/Título */}
-              <h1 className="hero-title">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
                 LEGADO MARCAS E PATENTES <span className="text-blue-500">®</span>
               </h1>
               
               {/* Texto principal */}
-              <div className="space-y-4 mb-10">
-                <p className="hero-text">
+              <div className="space-y-4 mb-8 md:mb-10">
+                <p className="text-xl md:text-2xl text-white font-medium">
                   Nós garantimos o seu registro! Com o nosso serviço, sua marca estará segura.
                 </p>
-                <p className="text-gray-200 text-lg">
+                <p className="text-base md:text-lg text-gray-200">
                   Em caso de indeferimento de marca, lhe daremos outra assessoria para depósito de uma nova marca totalmente gratuita!
                 </p>
               </div>
@@ -282,7 +282,7 @@ function App() {
               <a 
                 href="#contato" 
                 onClick={(e) => scrollToSection(e, 'contato')} 
-                className="hero-cta"
+                className="inline-flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold px-6 py-3 rounded-lg transition-all text-base md:text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1"
                 role="button"
                 aria-label="Solicitar orçamento agora"
               >
@@ -293,59 +293,112 @@ function App() {
           </div>
         </section>
 
-      {/* Desenvolvimento - Parte 1: Nossos Serviços */}
+        {/* Mobile Menu Aprimorado */}
+        {mobileMenuOpen && (
+          <nav 
+            className="md:hidden fixed inset-0 z-50 bg-white/95 backdrop-blur-sm transform transition-transform duration-300 ease-in-out" 
+            id="mobile-menu" 
+            aria-label="Menu mobile"
+          >
+            <div className="h-full flex flex-col">
+              <div className="flex justify-end p-4">
+                <button 
+                  onClick={toggleMobileMenu}
+                  className="p-2 rounded-full hover:bg-gray-100"
+                  aria-label="Fechar menu"
+                >
+                  <X className="w-6 h-6 text-blue-900" />
+                </button>
+              </div>
+              <div className="flex-1 flex flex-col justify-center items-center space-y-6 p-4">
+                {[
+                  { href: '#servicos', text: 'SERVIÇOS' },
+                  { href: '#vantagens', text: 'VANTAGENS' },
+                  { href: '#diferenciais', text: 'DIFERENCIAIS' },
+                  { href: '#processo', text: 'PROCESSO' },
+                  { href: '#depoimentos', text: 'DEPOIMENTOS' },
+                  { href: '#contato', text: 'CONTATO' }
+                ].map((item) => (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    onClick={(e) => {
+                      scrollToSection(e, item.href.slice(1));
+                      toggleMobileMenu();
+                    }}
+                    className="text-xl font-medium text-gray-900 hover:text-blue-700 transition-colors py-2 px-4 rounded-lg hover:bg-blue-50 w-full text-center"
+                  >
+                    {item.text}
+                  </a>
+                ))}
+              </div>
+              {/* Botão de contato no menu mobile */}
+              <div className="p-4 border-t border-gray-200">
+                <a 
+                  href="tel:+551233410600"
+                  className="flex items-center justify-center gap-2 w-full bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-3 px-6 rounded-lg transition-all"
+                >
+                  <PhoneCall className="w-5 h-5" />
+                  <span>(12) 3341-0600</span>
+                </a>
+              </div>
+            </div>
+          </nav>
+        )}
+
+        {/* Desenvolvimento - Parte 1: Nossos Serviços */}
         <section id="servicos" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Soluções Completas em Propriedade Intelectual
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Oferecemos um conjunto abrangente de serviços para proteger e valorizar seu patrimônio intelectual
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                icon: <Scale className="w-12 h-12 text-blue-600" />,
-                title: "Registro de Marcas",
-                description: "Proteção legal completa para sua marca em território nacional e internacional"
-              },
-              {
-                icon: <Shield className="w-12 h-12 text-blue-600" />,
-                title: "Monitoramento",
-                description: "Vigilância constante contra violações e uso indevido da sua marca"
-              },
-              {
-                icon: <BookOpen className="w-12 h-12 text-blue-600" />,
-                title: "Consultoria Especializada",
-                description: "Orientação estratégica para maximizar o valor da sua propriedade intelectual"
-              }
-            ].map((service, index) => (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                Soluções Completas em Propriedade Intelectual
+              </h2>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Oferecemos um conjunto abrangente de serviços para proteger e valorizar seu patrimônio intelectual
+              </p>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[
+                {
+                  icon: <Scale className="w-12 h-12 text-blue-600" />,
+                  title: "Registro de Marcas",
+                  description: "Proteção legal completa para sua marca em território nacional e internacional"
+                },
+                {
+                  icon: <Shield className="w-12 h-12 text-blue-600" />,
+                  title: "Monitoramento",
+                  description: "Vigilância constante contra violações e uso indevido da sua marca"
+                },
+                {
+                  icon: <BookOpen className="w-12 h-12 text-blue-600" />,
+                  title: "Consultoria Especializada",
+                  description: "Orientação estratégica para maximizar o valor da sua propriedade intelectual"
+                }
+              ].map((service, index) => (
                 <div key={index} className="bg-gray-50 p-8 rounded-xl hover:shadow-xl transition-all highlight-hover">
                   <div className="transform transition-transform hover:scale-110 inline-block mb-2">
-                {service.icon}
+                    {service.icon}
                   </div>
-                <h3 className="text-xl font-bold mt-4 mb-2">{service.title}</h3>
-                <p className="text-gray-600">{service.description}</p>
-              </div>
-            ))}
+                  <h3 className="text-xl font-bold mt-4 mb-2">{service.title}</h3>
+                  <p className="text-gray-600">{service.description}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
-{/* PartnersCarousel */}
-<section id="parceiros">
+        </section>
+
+        {/* PartnersCarousel */}
+        <section id="parceiros">
           <PartnersCarousel />
-      </section>
+        </section>
 
         {/* Seção Credenciamento INPI */}
-        <section id="credenciamento" className="py-12 bg-white"> {/* Fundo branco e padding */}
+        <section id="credenciamento" className="py-12 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-center items-center space-x-6 md:space-x-8"> {/* Centraliza e espaça os itens */}
+            <div className="flex justify-center items-center space-x-6 md:space-x-8">
               <span className="text-gray-500 uppercase tracking-wider font-semibold text-sm md:text-base">
                 Empresa Credenciada
               </span>
-              {/* Placeholder para o logo do INPI - Substitua 'URL_LOGO_INPI' pela URL real */}
               <img
                 loading="lazy" 
                 src="https://legadomarcas.com.br/wp-content/uploads/2021/01/Legado_Marcas_e_Patentes_INPI.png" 
@@ -357,89 +410,76 @@ function App() {
             </div>
           </div>
         </section>
+
         {/* Desenvolvimento - Parte 2: Vantagens (anteriormente Diferenciais) */}
-        <section id="vantagens" className="py-20 bg-gray-100"> {/* Fundo cinza claro */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section id="vantagens" className="py-20 bg-gray-100">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-4xl font-bold text-blue-900 mb-4">
                 A marca é um dos patrimônios mais valiosos.
-          </h2>
+              </h2>
               <p className="text-xl text-gray-600 max-w-3xl mx-auto">
                 Confira as vantagens de ter a sua marca registrada:
               </p>
             </div>
-            {/* Grade de Vantagens */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
               {[
                 {
-                  // Ícone representando território nacional
                   icon: <Globe className="w-16 h-16 text-blue-600 mx-auto mb-6" />,
                   description: "Direito de uso exclusivo em todo território nacional, em seu ramo de atividade econômica."
                 },
                 {
-                  // Ícone representando impedimento de cópias
                   icon: <ShieldOff className="w-16 h-16 text-blue-600 mx-auto mb-6" />,
                   description: "Direito de impedir que copiadores e concorrentes utilizem a sua marca, no mesmo segmento de mercado."
                 },
                 {
-                  // Ícone representando proteção jurídica
                   icon: <Scale className="w-16 h-16 text-blue-600 mx-auto mb-6" />,
                   description: "Proteção jurídica e comercial, com direito de indenização por uso indevido de marca."
                 },
                 {
-                  // Ícone representando cessão/licenciamento
                   icon: <Users2 className="w-16 h-16 text-blue-600 mx-auto mb-6" />,
                   description: "Direito de ceder ou licenciar a marca para terceiros."
                 },
                 {
-                  // Ícone representando aumento de valor/sucesso
                   icon: <TrendingUp className="w-16 h-16 text-blue-600 mx-auto mb-6" />,
                   description: "Aumentar o valor da marca, impulsionando o sucesso do negócio."
                 },
                 {
-                  // Ícone representando selo exclusivo/credibilidade
                   icon: <BadgeCheck className="w-16 h-16 text-blue-600 mx-auto mb-6" />,
                   description: "Utilizar um selo exclusivo que transmite mais credibilidade e referência de qualidade."
                 }
               ].map((vantagem, index) => (
-                // Card de Vantagem
                 <div 
                   key={index} 
                   className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-shadow text-center transform hover:-translate-y-1 highlight-hover"
                 >
-                  {/* Renderiza o ícone Lucide */}
                   <div className="flex justify-center mb-6 transform transition-all hover:scale-110 hover:rotate-3 duration-300">
-                      {vantagem.icon}
+                    {vantagem.icon}
                   </div>
                   <p className="text-gray-700 text-lg">{vantagem.description}</p>
-              </div>
-            ))}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
         {/* Seção de Diferenciais */}
         <Diferenciais />
 
         {/* Chamada para Ação Premium - Alta Conversão */}
         <section className="py-10 relative overflow-hidden">
-          {/* Fundo com gradiente e efeito de brilho */}
           <div className="absolute inset-0 bg-gradient-to-r from-amber-100 via-yellow-50 to-amber-100"></div>
           
-          {/* Círculos decorativos */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-300 opacity-10 rounded-full blur-3xl transform translate-x-1/4 -translate-y-1/2"></div>
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-amber-400 opacity-10 rounded-full blur-3xl transform -translate-x-1/4 translate-y-1/2"></div>
           
-          {/* Efeito de brilho dourado */}
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-amber-200/20 via-transparent to-transparent"></div>
           
           <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="bg-white rounded-2xl p-1 shadow-xl overflow-hidden transform transition-all hover:shadow-2xl">
               <div className="p-6 relative overflow-hidden group">
-                {/* Gradiente de borda animada */}
                 <div className="absolute -inset-1 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 rounded-xl blur opacity-30 group-hover:opacity-60 transition duration-1000 group-hover:duration-300 animate-gradient-xy"></div>
                 
-                {/* Conteúdo */}
                 <div className="relative bg-white rounded-xl p-6 border border-amber-100/80">
                   <div className="absolute -top-10 -right-10 w-20 h-20 bg-yellow-400/20 rounded-full blur-2xl"></div>
                   
@@ -457,10 +497,8 @@ function App() {
                       onClick={(e) => scrollToSection(e, 'contato')}
                       className="group relative overflow-hidden rounded-lg bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-500 px-8 py-3 font-bold text-white shadow-[0_4px_20px_rgba(245,158,11,0.3)] transition-all duration-300 hover:shadow-[0_8px_30px_rgba(245,158,11,0.5)] active:scale-95 hover:-translate-y-1"
                     >
-                      {/* Efeito de brilho no hover */}
                       <span className="absolute inset-0 h-full w-1/3 bg-white/30 blur-sm transform -skew-x-12 -translate-x-full transition-transform duration-700 ease-in-out group-hover:translate-x-[400%]"></span>
                       
-                      {/* Texto com ícone */}
                       <span className="relative flex items-center justify-center gap-2">
                         <span>SOLICITAR ORÇAMENTO</span>
                         <svg className="w-5 h-5 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -470,7 +508,6 @@ function App() {
                     </a>
                   </div>
                   
-                  {/* Badge de tempo limitado com contador */}
                   <div className="mt-6 flex justify-center">
                     <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200/80 px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs text-amber-800 animate-pulse-slow shadow-sm">
                       <svg className="w-4 h-4 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -486,9 +523,8 @@ function App() {
         </section>
 
         {/* Nova Seção - ATENÇÃO! */}
-        <section id="atencao" className="py-20 bg-red-50"> {/* Fundo levemente avermelhado para destaque */}
+        <section id="atencao" className="py-20 bg-red-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            {/* Títulos */}
             <div className="text-center mb-12">
               <h2 className="text-4xl font-bold text-red-600 mb-3 flex items-center justify-center gap-3">
                 <AlertTriangle className="w-10 h-10" /> ATENÇÃO!
@@ -498,15 +534,13 @@ function App() {
               </h3>
             </div>
 
-            {/* Conteúdo Principal - Duas Colunas */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-12">
-              {/* Coluna Esquerda - Riscos */}
               <div>
                 <p className="text-lg text-gray-700 mb-8">
                   É preciso dar entrada no processo de registro em tempo hábil, antes de terceiros ou de concorrentes, para não correr vários riscos:
                 </p>
                 <ul className="space-y-5">
-                  {[ // Lista de Riscos
+                  {[
                     "Perder o direito de uso.",
                     "Perder o investimento feito em marketing e branding (fachada, cartões de visitas, uniformes, redes sociais entre outros).",
                     "Prejudicar a imagem da empresa.",
@@ -520,7 +554,6 @@ function App() {
                 </ul>
               </div>
 
-              {/* Coluna Direita - Imagem */}
               <div>
                 <img 
                   loading="lazy"
@@ -533,7 +566,6 @@ function App() {
               </div>
             </div>
 
-            {/* Texto Final e Botão */}
             <div className="text-center">
               <p className="text-xl text-gray-800 mb-8 max-w-2xl mx-auto">
                 Sua marca não pode esperar mais. Solicite o registro de sua marca hoje.
@@ -541,91 +573,88 @@ function App() {
               <button className="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold py-4 px-8 rounded-lg text-lg transition-all shadow-md">
                 SOLICITAR ORÇAMENTO
               </button>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Desenvolvimento - Parte 3: Processo */}
+        {/* Desenvolvimento - Parte 3: Processo */}
         <section id="processo" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Como Funciona o Processo?
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Metodologia simplificada e transparente para o registro da sua marca
-            </p>
-          </div>
-          <div className="relative">
-            <div className="hidden md:block absolute left-0 right-0 top-1/2 h-1 bg-gradient-to-r from-blue-100 via-blue-500 to-blue-100 transform -translate-y-1/2"></div>
-            <div className="grid md:grid-cols-4 gap-8 relative">
-              {[
-                {
-                  step: "1",
-                  icon: <Search className="w-8 h-8" />,
-                  title: "Análise Inicial",
-                  description: "Avaliação gratuita da viabilidade do seu registro",
-                  details: ["Pesquisa de anterioridade", "Análise de concorrência", "Verificação de disponibilidade"]
-                },
-                {
-                  step: "2",
-                  icon: <FileText className="w-8 h-8" />,
-                  title: "Estratégia",
-                  description: "Planejamento personalizado para sua marca",
-                  details: ["Definição de classes", "Escolha de territórios", "Plano de proteção"]
-                },
-                {
-                  step: "3",
-                  icon: <FileCheck className="w-8 h-8" />,
-                  title: "Registro",
-                  description: "Condução do processo junto ao INPI",
-                  details: ["Preparação documental", "Protocolo do pedido", "Acompanhamento processual"]
-                },
-                {
-                  step: "4",
-                  icon: <ShieldCheck className="w-8 h-8" />,
-                  title: "Proteção",
-                  description: "Monitoramento contínuo da sua marca",
-                  details: ["Vigilância de mercado", "Defesa contra infrações", "Renovações automáticas"]
-                }
-              ].map((step, index) => (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                Como Funciona o Processo?
+              </h2>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Metodologia simplificada e transparente para o registro da sua marca
+              </p>
+            </div>
+            <div className="relative">
+              <div className="hidden md:block absolute left-0 right-0 top-1/2 h-1 bg-gradient-to-r from-blue-100 via-blue-500 to-blue-100 transform -translate-y-1/2"></div>
+              <div className="grid md:grid-cols-4 gap-8 relative">
+                {[
+                  {
+                    step: "1",
+                    icon: <Search className="w-8 h-8" />,
+                    title: "Análise Inicial",
+                    description: "Avaliação gratuita da viabilidade do seu registro",
+                    details: ["Pesquisa de anterioridade", "Análise de concorrência", "Verificação de disponibilidade"]
+                  },
+                  {
+                    step: "2",
+                    icon: <FileText className="w-8 h-8" />,
+                    title: "Estratégia",
+                    description: "Planejamento personalizado para sua marca",
+                    details: ["Definição de classes", "Escolha de territórios", "Plano de proteção"]
+                  },
+                  {
+                    step: "3",
+                    icon: <FileCheck className="w-8 h-8" />,
+                    title: "Registro",
+                    description: "Condução do processo junto ao INPI",
+                    details: ["Preparação documental", "Protocolo do pedido", "Acompanhamento processual"]
+                  },
+                  {
+                    step: "4",
+                    icon: <ShieldCheck className="w-8 h-8" />,
+                    title: "Proteção",
+                    description: "Monitoramento contínuo da sua marca",
+                    details: ["Vigilância de mercado", "Defesa contra infrações", "Renovações automáticas"]
+                  }
+                ].map((step, index) => (
                   <div 
                     key={index} 
                     className="relative bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-2 duration-300 highlight-hover"
                   >
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                    <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                       <div className="bg-blue-900 text-white w-12 h-12 rounded-full flex items-center justify-center font-bold relative z-10 hover:scale-110 transition-transform">
-                      <div className="absolute inset-0 bg-blue-600 rounded-full animate-pulse opacity-50"></div>
-                      {step.icon}
+                        <div className="absolute inset-0 bg-blue-600 rounded-full animate-pulse opacity-50"></div>
+                        {step.icon}
+                      </div>
+                    </div>
+                    <div className="mt-8 text-center">
+                      <h3 className="text-xl font-bold mb-3 text-blue-900">{step.title}</h3>
+                      <p className="text-gray-600 mb-4">{step.description}</p>
+                      <ul className="text-sm text-gray-500 space-y-2">
+                        {step.details.map((detail, idx) => (
+                          <li key={idx} className="flex items-center justify-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-blue-500" />
+                            {detail}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   </div>
-                  <div className="mt-8 text-center">
-                    <h3 className="text-xl font-bold mb-3 text-blue-900">{step.title}</h3>
-                    <p className="text-gray-600 mb-4">{step.description}</p>
-                    <ul className="text-sm text-gray-500 space-y-2">
-                      {step.details.map((detail, idx) => (
-                        <li key={idx} className="flex items-center justify-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-blue-500" />
-                          {detail}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
         {/* Seção de Vídeos e Depoimentos */}
         <VideoTestimonialSection />
 
-        
-
         {/* Conclusão - Section de Contato */}
         <section id="contato" className="bg-gradient-to-br from-blue-900 to-blue-800 text-white py-12 relative overflow-hidden">
-          {/* Elementos decorativos de fundo */}
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-0 left-0 w-64 h-64 bg-yellow-400 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2"></div>
             <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-500 rounded-full blur-3xl transform translate-x-1/3 translate-y-1/3"></div>
@@ -642,13 +671,11 @@ function App() {
             </div>
             
             <div className="grid md:grid-cols-5 gap-5">
-              {/* Coluna de Informações de Contato - 2/5 */}
               <div className="md:col-span-2 bg-blue-800/60 backdrop-blur-sm rounded-xl p-5 shadow-lg border border-blue-700/50">
                 <h3 className="text-xl font-bold mb-5 flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-yellow-400" /> Nossos Contatos
                 </h3>
                 
-                {/* Informações de contato com ícones melhorados */}
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
                     <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-2 rounded-lg shadow-md">
@@ -704,7 +731,6 @@ function App() {
                   </div>
                 </div>
                 
-                {/* Redes Sociais */}
                 <div className="mt-6">
                   <h4 className="font-semibold text-base mb-3">Siga-nos</h4>
                   <div className="flex space-x-3">
@@ -729,10 +755,8 @@ function App() {
                 </div>
               </div>
               
-              {/* Formulário de Contato - 3/5 */}
               <div className="md:col-span-3">
                 <div className="grid md:grid-cols-3 gap-5">
-                  {/* Mapa Interativo */}
                   <div className="md:col-span-3 h-48 rounded-xl overflow-hidden shadow-lg mb-4">
                     <iframe 
                       src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3667.073842593106!2d-45.88765162475539!3d-23.197639979078307!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94cc4a6e1b0bef45%3A0x8c1b0d54ce1cf2bd!2sAv.%20Mal.%20Floriano%20Peixoto%2C%20347%20-%20Sala%201009%20-%20Centro%2C%20S%C3%A3o%20Jos%C3%A9%20dos%20Campos%20-%20SP%2C%2012210-030!5e0!3m2!1spt-BR!2sbr!4v1685456234213!5m2!1spt-BR!2sbr" 
@@ -746,7 +770,6 @@ function App() {
                     ></iframe>
                   </div>
                   
-                  {/* Formulário de Contato */}
                   <div className="md:col-span-3">
                     <ContactForm />
                   </div>
@@ -754,7 +777,6 @@ function App() {
               </div>
             </div>
             
-            {/* Chamada para WhatsApp */}
             <div className="mt-8 text-center">
               <p className="mb-3 text-base">Prefere atendimento mais rápido?</p>
               <a 
@@ -768,102 +790,106 @@ function App() {
                 </svg>
                 Fale pelo WhatsApp
               </a>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Footer com Referências */}
-      <footer className="bg-gray-900 text-gray-400 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-3 gap-8 mb-8">
-            <div>
-              <h3 className="text-white font-bold mb-4">Legado Marcas</h3>
-              <p className="text-sm">
-                Especialistas em propriedade intelectual, oferecendo soluções completas para proteção de marcas e patentes.
-              </p>
-            </div>
-            <div>
-              <h3 className="text-white font-bold mb-4">Certificações</h3>
-                <ul className="text-sm space-y-2" aria-label="Nossas certificações">
-                <li>Registro INPI nº 12345</li>
-                <li>ISO 9001:2015</li>
-                <li>Membro ABPI</li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-white font-bold mb-4">Contato</h3>
-                <ul className="text-sm space-y-2" aria-label="Informações de contato">
+        {/* Footer com Referências */}
+        <footer className="bg-gray-900 text-gray-400 py-8 md:py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+              <div className="text-center md:text-left">
+                <img 
+                  src="https://legadomarcas.com.br/wp-content/uploads/2021/01/cropped-LEGADO-Marcas-e-Patentes_Marca-Copmpleta-Color-Vert_Marca-Copmpleta-Color-Vert-1-1.png"
+                  alt="Legado Marcas e Patentes"
+                  className="h-16 w-auto mb-4 brightness-200 mx-auto md:mx-0"
+                  loading="lazy"
+                  width="180"
+                  height="64"
+                />
+                <h3 className="text-white font-bold mb-4">Legado Marcas</h3>
+                <p className="text-sm">
+                  Especialistas em propriedade intelectual, oferecendo soluções completas para proteção de marcas e patentes.
+                </p>
+              </div>
+              <div className="text-center md:text-left">
+                <h3 className="text-white font-bold mb-4">Certificações</h3>
+                <ul className="text-sm space-y-2">
+                  <li>Registro INPI nº 12345</li>
+                  <li>ISO 9001:2015</li>
+                  <li>Membro ABPI</li>
+                </ul>
+              </div>
+              <div className="text-center md:text-left">
+                <h3 className="text-white font-bold mb-4">Contato</h3>
+                <ul className="text-sm space-y-2">
                   <li>
                     <a href="mailto:contato@legadomarcas.com.br" className="hover:text-white transition-colors">
                       contato@legadomarcas.com.br
                     </a>
                   </li>
                   <li>
-                    <a href="tel:+551130000000" className="hover:text-white transition-colors">
-                      +55 (11) 3000-0000
+                    <a href="tel:+551233410600" className="hover:text-white transition-colors">
+                      (12) 3341-0600
                     </a>
                   </li>
-                <li>São Paulo - SP</li>
-              </ul>
+                  <li>São Paulo - SP</li>
+                </ul>
+              </div>
             </div>
-          </div>
-          
-          {/* Reclame Aqui - Versão Redesenhada */}
-          <div className="my-10 flex flex-col items-center justify-center">
-            <div className="bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 p-0.5 rounded-xl shadow-lg max-w-sm w-full">
-              <div className="bg-gray-900 rounded-xl p-5 transition-all duration-300 group hover:bg-gray-800/80">
-                <div className="flex flex-col items-center">
-                  {/* Título com ícone */}
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="text-green-400 animate-pulse">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                        <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
-                      </svg>
+            
+            <div className="my-10 flex flex-col items-center justify-center">
+              <div className="bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 p-0.5 rounded-xl shadow-lg max-w-sm w-full">
+                <div className="bg-gray-900 rounded-xl p-5 transition-all duration-300 group hover:bg-gray-800/80">
+                  <div className="flex flex-col items-center">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="text-green-400 animate-pulse">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                          <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <p className="text-white font-medium">Confira nossa reputação:</p>
                     </div>
-                    <p className="text-white font-medium">Confira nossa reputação:</p>
-                  </div>
-                  
-                  {/* Imagem com efeito de brilho no hover */}
-                  <div className="relative overflow-hidden rounded-lg transition-all duration-300 transform group-hover:scale-105">
-                    {/* Efeito de brilho */}
-                    <div className="absolute -inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-green-400/0 via-green-400/20 to-green-400/0 blur-sm transform -skew-x-12 -translate-x-full group-hover:translate-x-[400%] transition-all duration-1500 ease-in-out"></div>
                     
-                    <a 
-                      href="https://www.reclameaqui.com.br/empresa/legado-marcas-e-patentes/" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      aria-label="Legado Marcas e Patentes no Reclame Aqui"
-                      className="block"
-                    >
-                      <img 
-                        loading="lazy" 
-                        decoding="async" 
-                        width="318" 
-                        height="68" 
-                        src="https://legadomarcas.com.br/wp-content/uploads/2021/01/Screenshot_2.png" 
-                        alt="Legado Marcas e Patentes no Reclame Aqui"
-                        className="w-full h-auto object-contain transition-transform duration-500 group-hover:brightness-110"
-                      />
-                    </a>
+                    <div className="relative overflow-hidden rounded-lg transition-all duration-300 transform group-hover:scale-105">
+                      <div className="absolute -inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-green-400/0 via-green-400/20 to-green-400/0 blur-sm transform -skew-x-12 -translate-x-full group-hover:translate-x-[400%] transition-all duration-1500 ease-in-out"></div>
+                      
+                      <a 
+                        href="https://www.reclameaqui.com.br/empresa/legado-marcas-e-patentes/" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        aria-label="Legado Marcas e Patentes no Reclame Aqui"
+                        className="block"
+                      >
+                        <img 
+                          loading="lazy" 
+                          decoding="async" 
+                          width="318" 
+                          height="68" 
+                          src="https://legadomarcas.com.br/wp-content/uploads/2021/01/Screenshot_2.png" 
+                          alt="Legado Marcas e Patentes no Reclame Aqui"
+                          className="w-full h-auto object-contain transition-transform duration-500 group-hover:brightness-110"
+                        />
+                      </a>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-          
-          <div className="border-t border-gray-800 pt-8 text-center">
-            <p className="text-sm">
+            
+            <div className="border-t border-gray-800 pt-8 text-center">
+              <p className="text-sm">
                 © {new Date().getFullYear()} Legado Marcas. Todos os direitos reservados.
-            </p>
+              </p>
+            </div>
           </div>
-        </div>
-      </footer>
-      </main>
+        </footer>
 
-      {/* ChatBot */}
-      <ChatBot 
-        webhookUrl={import.meta.env.VITE_WEBHOOK_URL} // Lê a URL do webhook do arquivo .env
-      />
+        {/* ChatBot */}
+        <ChatBot 
+          webhookUrl={import.meta.env.VITE_WEBHOOK_URL}
+        />
+      </main>
     </div>
   );
 }
