@@ -30,7 +30,7 @@ COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/server.js ./
 
 # Instalar apenas dependências de produção
-RUN npm ci --only=production
+RUN npm install --omit=dev
 
 # Expor a porta que o servidor vai usar
 ENV PORT=3000

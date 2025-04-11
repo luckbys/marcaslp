@@ -5,21 +5,11 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   build: {
-    minify: 'esbuild',
-    target: 'es2020',
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
-    cssMinify: 'esbuild',
-    modulePreload: {
-      polyfill: false
-    },
-    rollupOptions: undefined
-  },
-  optimizeDeps: {
-    esbuildOptions: {
-      target: 'es2020'
-    }
+    target: 'esnext',
+    minify: true
   },
   server: {
     port: 3000,
