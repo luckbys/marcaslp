@@ -46,6 +46,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
   const [isFirstInteraction, setIsFirstInteraction] = useState<boolean>(true);
   const [showScrollButton, setShowScrollButton] = useState<boolean>(false);
   const [isScrolledToBottom, setIsScrolledToBottom] = useState<boolean>(true);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
   
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -469,62 +470,82 @@ const ChatBot: React.FC<ChatBotProps> = ({
     }
   `;
 
+  // Detectar se é um dispositivo móvel
+  useEffect(() => {
+    const checkMobile = () => {
+      const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+      const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+      setIsMobile(mobileRegex.test(userAgent) || window.innerWidth <= 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
+
   return (
     <div className="fixed bottom-4 right-4 z-50">
-      {/* Botão para abrir/fechar o chat */}
+      {/* Botão para abrir/fechar o chat - Maior em mobile */}
       <button
         onClick={toggleChat}
-        className="relative bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-105"
+        className="relative bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 md:p-3 shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-105 w-14 h-14 md:w-12 md:h-12"
         style={{ backgroundColor: primaryColor }}
         aria-label={isOpen ? "Fechar chat" : "Abrir chat"}
       >
-        {isOpen ? <X size={24} /> : <MessageSquare size={24} />}
+        {isOpen ? <X size={28} /> : <MessageSquare size={28} />}
         
-        {/* Badge de notificação */}
+        {/* Badge de notificação - Maior em mobile */}
         {!isOpen && unreadMessages > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 md:w-5 md:h-5 flex items-center justify-center animate-pulse">
             {unreadMessages > 9 ? '9+' : unreadMessages}
           </span>
         )}
       </button>
 
-      {/* Janela do chat - com animação de fade in/out */}
+      {/* Janela do chat - Tela cheia em mobile */}
       {isOpen && (
         <div 
-          className="absolute bottom-16 right-0 w-80 sm:w-96 bg-white rounded-lg shadow-xl flex flex-col overflow-hidden border border-gray-200 animate-fadeIn"
-          style={{ animation: 'fadeIn 0.3s ease-out' }}
+          className="fixed md:absolute inset-0 md:inset-auto md:bottom-16 md:right-0 w-full md:w-96 bg-white md:rounded-lg shadow-xl flex flex-col overflow-hidden border border-gray-200 animate-fadeIn z-50"
+          style={{ animation: 'fadeIn 0.3s ease-out', height: isMobile ? '100vh' : 'auto', maxHeight: isMobile ? '100vh' : '600px' }}
         >
-          {/* Cabeçalho do chat */}
+          {/* Cabeçalho do chat - Maior em mobile */}
           <div 
-            className="p-3 flex justify-between items-center text-white"
+            className="p-4 md:p-3 flex justify-between items-center text-white"
             style={{ backgroundColor: primaryColor }}
           >
             <div className="flex items-center">
               <BotAvatar />
-              <h3 className="font-medium">{botName}</h3>
+              <h3 className="font-medium text-lg md:text-base">{botName}</h3>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-4 md:space-x-2">
               <button 
                 onClick={clearConversation} 
-                className="text-white hover:text-gray-200 transition-colors"
+                className="text-white hover:text-gray-200 transition-colors p-2 md:p-1"
                 aria-label="Limpar conversa"
                 title="Limpar conversa"
               >
-                <Trash2 size={16} />
+                <Trash2 size={isMobile ? 20 : 16} />
               </button>
               <button 
                 onClick={toggleChat} 
-                className="text-white hover:text-gray-200 transition-colors"
+                className="text-white hover:text-gray-200 transition-colors p-2 md:p-1"
                 aria-label="Fechar chat"
               >
-                <X size={20} />
+                <X size={isMobile ? 24 : 20} />
               </button>
             </div>
           </div>
 
-          {/* Mensagens */}
+          {/* Mensagens - Ajuste de altura para mobile */}
           <div 
-            className="flex-1 p-4 overflow-y-auto max-h-96 bg-gray-50"
+            className="flex-1 p-4 overflow-y-auto bg-gray-50"
+            style={{ 
+              height: isMobile ? 'calc(100vh - 140px)' : 'auto',
+              maxHeight: isMobile ? 'calc(100vh - 140px)' : '400px'
+            }}
             onScroll={handleScroll}
             ref={chatContainerRef}
           >
@@ -632,16 +653,16 @@ const ChatBot: React.FC<ChatBotProps> = ({
             )}
           </div>
 
-          {/* Botões de ação rápida, visíveis apenas no início da conversa */}
+          {/* Botões de ação rápida - Layout melhorado para mobile */}
           {isFirstInteraction && messages.length < 2 && (
-            <div className="px-4 py-2 bg-gray-50 border-t border-gray-200">
-              <p className="text-xs text-gray-500 mb-2">Perguntas frequentes:</p>
-              <div className="flex flex-wrap gap-2">
+            <div className="px-4 py-3 md:py-2 bg-gray-50 border-t border-gray-200">
+              <p className="text-sm md:text-xs text-gray-500 mb-3 md:mb-2">Perguntas frequentes:</p>
+              <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2">
                 {quickActions.map(action => (
                   <button
                     key={action.id}
                     onClick={action.action}
-                    className="bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs px-3 py-1 rounded-full transition-colors"
+                    className="bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm md:text-xs px-4 py-2 md:px-3 md:py-1 rounded-full transition-colors w-full md:w-auto text-center"
                   >
                     {action.text}
                   </button>
@@ -650,47 +671,53 @@ const ChatBot: React.FC<ChatBotProps> = ({
             </div>
           )}
 
-          {/* Formulário de entrada */}
-          <div className="p-3 border-t border-gray-200 bg-white">
-            <div className="flex">
+          {/* Formulário de entrada - Maior em mobile */}
+          <div className="p-4 md:p-3 border-t border-gray-200 bg-white">
+            <div className="flex items-center">
               <input
                 ref={inputRef}
                 type="text"
                 placeholder="Digite sua mensagem..."
-                className="flex-1 p-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                className="flex-1 p-3 md:p-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base md:text-sm"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
                 disabled={isLoading}
               />
               <button
-                className="text-white px-3 rounded-r-lg flex items-center justify-center disabled:opacity-50 transition-all"
+                className="text-white px-4 md:px-3 rounded-r-lg flex items-center justify-center disabled:opacity-50 transition-all h-12 md:h-10"
                 style={{ backgroundColor: isLoading || !inputValue.trim() ? '#9CA3AF' : primaryColor }}
                 onClick={() => sendMessage()}
                 disabled={isLoading || !inputValue.trim()}
               >
-                <Send size={18} />
+                <Send size={isMobile ? 22 : 18} />
               </button>
             </div>
           </div>
           
-          {/* Rodapé com créditos */}
-          <div className="px-3 py-1 bg-gray-50 border-t border-gray-200">
-            <p className="text-xs text-gray-400 text-center">
+          {/* Rodapé - Ajustado para mobile */}
+          <div className="px-4 py-2 md:px-3 md:py-1 bg-gray-50 border-t border-gray-200">
+            <p className="text-sm md:text-xs text-gray-400 text-center">
               Powered by Legado Marcas e Patentes
             </p>
           </div>
         </div>
       )}
       
-      {/* Estilos para animações */}
+      {/* Estilos atualizados para mobile */}
       <style>{`
         @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
+          from { opacity: 0; transform: ${isMobile ? 'translateY(100%)' : 'translateY(10px)'} }
+          to { opacity: 1; transform: translateY(0) }
         }
         
         ${messageSlideAnimation}
+        
+        /* Melhorias para formatação de texto em mobile */
+        .text-sm p {
+          margin-bottom: ${isMobile ? '1rem' : '0.75rem'};
+          font-size: ${isMobile ? '1rem' : '0.875rem'};
+        }
         
         /* Melhorias para formatação de texto */
         .text-sm p {
@@ -744,6 +771,23 @@ const ChatBot: React.FC<ChatBotProps> = ({
         /* Estilo para o botão de rolagem */
         .scroll-button {
           animation: fadeIn 0.3s ease-out;
+        }
+
+        /* Ajustes específicos para mobile */
+        @media (max-width: 768px) {
+          .scroll-button {
+            bottom: 100px;
+            right: 20px;
+            padding: 12px;
+          }
+
+          .message-bubble {
+            max-width: 85%;
+          }
+
+          .typing-indicator {
+            padding: 12px 16px;
+          }
         }
       `}</style>
     </div>
