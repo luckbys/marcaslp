@@ -82,6 +82,9 @@ html {
   min-height: 100vh;
   display: flex;
   align-items: center;
+  perspective: 1000px;
+  transform-style: preserve-3d;
+  overflow: hidden;
 }
 
 .hero-overlay {
@@ -150,4 +153,38 @@ html {
   .hero-text {
     font-size: 1rem;
   }
+  
+  .hero-minimalista {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+  
+  .hero-minimalista > * {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Animação do indicador de giroscópio */
+@keyframes pulse {
+  0% { opacity: 0.5; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 0.5; transform: scale(0.95); }
+}
+
+.gyro-indicator {
+  animation: pulse 2s infinite;
+}
+
+/* Melhorar performance de renderização */
+.hero-minimalista * {
+  -webkit-transform: translateZ(0);
+  -moz-transform: translateZ(0);
+  -ms-transform: translateZ(0);
+  -o-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+/* Suavizar transições para o efeito do giroscópio */
+.hero-minimalista [style*="transform"] {
+  transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
 }
