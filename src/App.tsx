@@ -106,51 +106,60 @@ function App() {
   };
 
   // Calcular o efeito parallax baseado no giroscópio ou mouse
-  const calculateParallax = (intensity: number = 1) => {
+  const calculateParallax = (intensity: number = 1, depth: number = 0) => {
     if (isMobile && hasGyroscope) {
-      // Efeito do giroscópio para mobile
-      const betaMovement = (gyroData.beta / 180) * 30 * intensity;
-      const gammaMovement = (gyroData.gamma / 90) * 30 * intensity;
+      // Efeito do giroscópio aprimorado para mobile
+      const betaMovement = (gyroData.beta / 180) * 25 * intensity;
+      const gammaMovement = (gyroData.gamma / 90) * 25 * intensity;
+      const depthFactor = 1 + (depth * 0.1); // Adiciona profundidade baseada na camada
       
       return {
-        transform: `translate(${gammaMovement}px, ${betaMovement}px)`,
-        transition: 'transform 0.1s ease-out'
+        transform: `translate3d(${gammaMovement * depthFactor}px, ${betaMovement * depthFactor}px, ${depth}px) 
+                   rotateX(${-betaMovement * 0.1}deg) rotateY(${gammaMovement * 0.1}deg)`,
+        transition: 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)'
       };
     } else if (!isMobile) {
-      // Efeito do mouse para desktop - mais suave
+      // Desktop permanece o mesmo
       const xMovement = mousePosition.x * 15 * intensity;
       const yMovement = mousePosition.y * 15 * intensity;
       
       return {
-        transform: `translate3d(${xMovement}px, ${yMovement}px, 0) translateY(${scrollY * 0.4}px)`,
-        transition: 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)'
-      };
-    } else {
-      // Fallback para scroll simples
-      return {
-        transform: `translateY(${scrollY * 0.4}px)`,
+        transform: `translate3d(${xMovement}px, ${yMovement}px, ${depth}px) translateY(${scrollY * 0.4}px)`,
         transition: 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)'
       };
     }
+    
+    return {
+      transform: `translateY(${scrollY * 0.4}px)`,
+      transition: 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)'
+    };
   };
 
-  // Calcular rotação 3D baseada no mouse ou giroscópio
-  const calculate3DRotation = (intensity: number = 1) => {
+  // Calcular rotação 3D aprimorada
+  const calculate3DRotation = (intensity: number = 1, depth: number = 0) => {
     if (isMobile && hasGyroscope) {
-      const rotateX = (gyroData.beta / 180) * 20 * intensity;
-      const rotateY = (gyroData.gamma / 90) * 20 * intensity;
+      const betaAngle = (gyroData.beta / 180) * 15 * intensity;
+      const gammaAngle = (gyroData.gamma / 90) * 15 * intensity;
+      const depthFactor = 1 + (depth * 0.05);
       
       return {
-        transform: `rotateX(${-rotateX}deg) rotateY(${rotateY}deg)`,
-        transition: 'transform 0.1s ease-out'
+        transform: `
+          perspective(2000px)
+          rotateX(${-betaAngle * depthFactor}deg) 
+          rotateY(${gammaAngle * depthFactor}deg)
+          translateZ(${depth * 2}px)
+          scale(${1 + depth * 0.001})
+        `,
+        transformOrigin: 'center center',
+        transition: 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)'
       };
     } else if (!isMobile) {
-      // Rotação mais suave para desktop
+      // Desktop permanece o mesmo
       const rotateX = mousePosition.y * 10 * intensity;
       const rotateY = mousePosition.x * 10 * intensity;
       
       return {
-        transform: `perspective(2000px) rotateX(${-rotateX}deg) rotateY(${rotateY}deg)`,
+        transform: `perspective(2000px) rotateX(${-rotateX}deg) rotateY(${rotateY}deg) translateZ(${depth}px)`,
         transition: 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)'
       };
     }
@@ -360,25 +369,31 @@ function App() {
           aria-label="Seção principal"
           role="banner"
         >
-          {/* Background com parallax */}
+          {/* Background com parallax profundo */}
           <div 
             className="absolute inset-0 bg-cover bg-center z-0 transform-gpu" 
             style={{ 
               backgroundImage: "url('https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=2070&auto=format&fit=crop')",
-              ...calculateParallax(0.5)
+              ...calculateParallax(0.5, -20)
             }}
           ></div>
           
-          {/* Overlay com efeito parallax inverso */}
+          {/* Camada de profundidade adicional */}
           <div 
-            className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/20 z-1 transform-gpu"
-            style={calculate3DRotation(0.2)}
+            className="absolute inset-0 bg-gradient-to-b from-blue-900/30 to-transparent z-1 transform-gpu"
+            style={calculate3DRotation(0.3, -10)}
+          ></div>
+          
+          {/* Overlay principal com efeito parallax */}
+          <div 
+            className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/20 z-2 transform-gpu"
+            style={calculate3DRotation(0.2, 0)}
           ></div>
           
           {/* Marca d'água com efeito parallax intenso */}
           <div 
             className="hero-watermark right-1/4 top-1/2 transform -translate-y-1/2 transform-gpu" 
-            style={calculateParallax(2)}
+            style={calculateParallax(2, 50)}
             aria-hidden="true"
           >
             ®
@@ -387,16 +402,16 @@ function App() {
           {/* Conteúdo com efeito parallax suave */}
           <div 
             className="container mx-auto px-4 md:px-6 relative z-10 py-20 md:py-32 transform-gpu"
-            style={calculateParallax(0.3)}
+            style={calculateParallax(0.3, 30)}
           >
-            <div className="max-w-2xl">
-              {/* Logo/Título */}
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
+            <div className="max-w-2xl relative">
+              {/* Título com profundidade */}
+              <h1 className="hero-title transform-gpu" style={calculateParallax(0.4, 40)}>
                 LEGADO MARCAS E PATENTES <span className="text-blue-500">®</span>
               </h1>
               
-              {/* Texto principal */}
-              <div className="space-y-4 mb-8 md:mb-10">
+              {/* Texto com profundidade média */}
+              <div className="space-y-4 mb-8 md:mb-10 transform-gpu" style={calculateParallax(0.35, 35)}>
                 <p className="text-xl md:text-2xl text-white font-medium">
                   Nós garantimos o seu registro! Com o nosso serviço, sua marca estará segura.
                 </p>
@@ -405,11 +420,12 @@ function App() {
                 </p>
               </div>
               
-              {/* Botão CTA */}
+              {/* CTA com máxima profundidade */}
               <a 
                 href="#contato" 
                 onClick={(e) => scrollToSection(e, 'contato')} 
-                className="inline-flex items-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold px-6 py-3 rounded-lg transition-all text-base md:text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                className="hero-cta transform-gpu shine-effect"
+                style={calculateParallax(0.45, 60)}
                 role="button"
                 aria-label="Solicitar orçamento agora"
               >
@@ -419,9 +435,12 @@ function App() {
             </div>
           </div>
 
-          {/* Indicador de efeito 3D */}
+          {/* Indicador de efeito 3D com profundidade */}
           {((isMobile && hasGyroscope) || !isMobile) && (
-            <div className="fixed bottom-4 left-4 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 text-white text-sm z-50">
+            <div 
+              className="fixed bottom-4 left-4 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 text-white text-sm z-50 transform-gpu"
+              style={calculateParallax(0.2, 70)}
+            >
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                 Efeito 3D {isMobile ? 'giroscópio' : 'mouse'} ativo

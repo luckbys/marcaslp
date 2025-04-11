@@ -271,12 +271,49 @@ html {
 /* Ajustes para mobile */
 @media (max-width: 768px) {
   .hero-minimalista {
-    transform: translateZ(0);
-    backface-visibility: hidden;
+    transform-style: preserve-3d;
+    perspective: 2000px;
   }
   
-  .hero-minimalista > * {
-    transform: translate3d(0, 0, 0);
+  .hero-minimalista::before {
+    content: '';
+    position: absolute;
+    inset: -5%;
+    background: inherit;
+    background-size: cover;
+    background-position: center;
+    transform: translateZ(-50px);
+    filter: blur(3px);
+    z-index: -1;
+  }
+
+  .hero-content {
+    transform-style: preserve-3d;
+  }
+
+  .hero-title {
+    transform: translateZ(40px);
+    text-shadow: 
+      0 1px 1px rgba(0,0,0,0.1),
+      0 2px 2px rgba(0,0,0,0.1),
+      0 4px 4px rgba(0,0,0,0.1),
+      0 8px 8px rgba(0,0,0,0.1);
+  }
+
+  .hero-text {
+    transform: translateZ(30px);
+    text-shadow: 
+      0 1px 1px rgba(0,0,0,0.1),
+      0 2px 2px rgba(0,0,0,0.1);
+  }
+
+  .hero-cta {
+    transform: translateZ(50px);
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .hero-cta:active {
+    transform: translateZ(30px) scale(0.95);
   }
 }
 
@@ -321,25 +358,47 @@ html {
     transparent
   );
   transform: rotate(45deg);
-  transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .shine-effect:hover::after {
   transform: rotate(45deg) translateY(100%);
 }
 
-/* Otimizações de movimento */
-@media (prefers-reduced-motion: no-preference) {
+/* Efeitos de profundidade adicionais para mobile */
+@media (max-width: 768px) {
   .transform-gpu {
-    transition-duration: 0.8s;
+    transform-style: preserve-3d;
+    perspective: 2000px;
   }
 
-  .hero-minimalista [style*="transform"] {
-    transition-duration: 0.8s;
+  .hero-minimalista [data-depth] {
+    transform-style: preserve-3d;
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  /* Efeito de camadas */
+  .hero-minimalista [data-depth="1"] { transform: translateZ(10px); }
+  .hero-minimalista [data-depth="2"] { transform: translateZ(20px); }
+  .hero-minimalista [data-depth="3"] { transform: translateZ(30px); }
+  .hero-minimalista [data-depth="4"] { transform: translateZ(40px); }
+  .hero-minimalista [data-depth="5"] { transform: translateZ(50px); }
+
+  /* Sombras dinâmicas */
+  .hero-minimalista [data-depth]:not([data-depth="0"]) {
+    box-shadow: 
+      0 5px 15px rgba(0,0,0,0.1),
+      0 10px 30px rgba(0,0,0,0.1);
+  }
+
+  /* Efeito de movimento suave */
+  .hero-minimalista * {
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+                opacity 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 }
 
-/* Melhorias de performance */
+/* Otimizações de performance */
 .hero-minimalista * {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
