@@ -1,8 +1,13 @@
 # Use a imagem base do Node.js
 FROM node:22-alpine as builder
 
-# Instalar dependências necessárias para o esbuild
-RUN apk add --no-cache python3 make g++
+# Instalar dependências necessárias
+RUN apk add --no-cache python3 make g++ git
+
+# Configurar variáveis de ambiente para o build
+ENV NODE_ENV=production
+ENV VITE_BUILD_MODE=production
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # Criar diretório da aplicação
 WORKDIR /app
@@ -10,7 +15,7 @@ WORKDIR /app
 # Copiar arquivos de dependência
 COPY package*.json ./
 
-# Instalar dependências
+# Instalar todas as dependências (incluindo dev para build)
 RUN npm install
 
 # Copiar o resto dos arquivos
@@ -34,6 +39,7 @@ RUN npm install --omit=dev
 
 # Expor a porta que o servidor vai usar
 ENV PORT=3000
+ENV NODE_ENV=production
 EXPOSE 3000
 
 # Comando para iniciar o servidor
