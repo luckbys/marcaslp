@@ -1,12 +1,17 @@
-# Use a imagem oficial do Node.js
+# Use a imagem base do Node.js
 FROM node:22-alpine
+
+# Instalar dependências necessárias para compilação
+RUN apk add --no-cache python3 make g++ git
 
 # Criar diretório da aplicação
 WORKDIR /app
 
-# Instalar dependências
-COPY package.json ./
-RUN npm install
+# Copiar arquivos de dependência
+COPY package*.json ./
+
+# Instalar todas as dependências (incluindo devDependencies)
+RUN npm ci --include=dev
 
 # Copiar o resto dos arquivos
 COPY . .
@@ -14,10 +19,11 @@ COPY . .
 # Construir a aplicação
 RUN npm run build
 
-# Limpar dependências de desenvolvimento e instalar apenas produção
-RUN npm prune --production
+# Limpar dependências de desenvolvimento
+RUN npm prune --omit=dev
 
 # Expor a porta que o servidor vai usar
+ENV PORT=3000
 EXPOSE 3000
 
 # Comando para iniciar o servidor
