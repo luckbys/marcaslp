@@ -82,7 +82,7 @@ html {
   min-height: 100vh;
   display: flex;
   align-items: center;
-  perspective: 1000px;
+  perspective: 2000px;
   transform-style: preserve-3d;
   overflow: hidden;
 }
@@ -184,7 +184,164 @@ html {
   transform: translateZ(0);
 }
 
-/* Suavizar transições para o efeito do giroscópio */
+/* Configurações 3D e Parallax */
+.hero-minimalista {
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  perspective: 2000px;
+  transform-style: preserve-3d;
+  overflow: hidden;
+}
+
+/* Otimizações de performance para transformações 3D */
+.transform-gpu {
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  will-change: transform;
+  transform: translateZ(0);
+  transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Suavização de movimento */
 .hero-minimalista [style*="transform"] {
-  transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Efeito de profundidade para elementos */
+.hero-minimalista > * {
+  transform-style: preserve-3d;
+}
+
+/* Ajustes para desktop */
+@media (min-width: 769px) {
+  .hero-minimalista {
+    transform-origin: center center;
+  }
+
+  .hero-minimalista::before {
+    content: '';
+    position: absolute;
+    inset: -10%;
+    background: inherit;
+    background-size: cover;
+    background-position: center;
+    transform: translateZ(-10px);
+    filter: blur(2px);
+    z-index: -1;
+  }
+
+  /* Efeito de hover suave nos elementos */
+  .hero-content {
+    transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform-origin: center center;
+  }
+
+  .hero-content:hover {
+    transform: translateZ(50px);
+  }
+
+  /* Efeito de profundidade para elementos interativos */
+  .hero-title {
+    transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform: translateZ(75px);
+    transform-origin: center left;
+  }
+
+  .hero-text {
+    transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform: translateZ(50px);
+    transform-origin: center left;
+  }
+
+  .hero-cta {
+    transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform: translateZ(100px);
+    transform-origin: center;
+  }
+
+  .hero-cta:hover {
+    transform: translateZ(120px) scale(1.05);
+  }
+}
+
+/* Ajustes para mobile */
+@media (max-width: 768px) {
+  .hero-minimalista {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+  
+  .hero-minimalista > * {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Animações suaves para transições */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) translateZ(0) rotateX(0) rotateY(0);
+  }
+  50% {
+    transform: translateY(-10px) translateZ(20px) rotateX(2deg) rotateY(2deg);
+  }
+}
+
+.floating {
+  animation: float 8s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+/* Efeito de profundidade para texto */
+.hero-title, .hero-text {
+  text-shadow: 
+    2px 2px 4px rgba(0, 0, 0, 0.2),
+    4px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Efeito de brilho suave */
+.shine-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine-effect::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transform: rotate(45deg);
+  transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.shine-effect:hover::after {
+  transform: rotate(45deg) translateY(100%);
+}
+
+/* Otimizações de movimento */
+@media (prefers-reduced-motion: no-preference) {
+  .transform-gpu {
+    transition-duration: 0.8s;
+  }
+
+  .hero-minimalista [style*="transform"] {
+    transition-duration: 0.8s;
+  }
+}
+
+/* Melhorias de performance */
+.hero-minimalista * {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transform: translate3d(0, 0, 0);
 }

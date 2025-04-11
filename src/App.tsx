@@ -12,6 +12,7 @@ function App() {
   const [scrollY, setScrollY] = useState(0);
   const [gyroData, setGyroData] = useState({ beta: 0, gamma: 0 });
   const [hasGyroscope, setHasGyroscope] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [timeLeft, setTimeLeft] = useState({
     days: 3,
     hours: 12,
@@ -62,6 +63,37 @@ function App() {
     };
   }, [isMobile, hasGyroscope]);
 
+  // Manipular movimento do mouse para desktop com debounce
+  useEffect(() => {
+    if (!isMobile) {
+      let frameId: number;
+      const handleMouseMove = (e: MouseEvent) => {
+        cancelAnimationFrame(frameId);
+        frameId = requestAnimationFrame(() => {
+          // Calcular a posição relativa do mouse com suavização
+          const rect = document.querySelector('.hero-minimalista')?.getBoundingClientRect();
+          if (rect) {
+            const x = (e.clientX - rect.left) / rect.width;
+            const y = (e.clientY - rect.top) / rect.height;
+            
+            // Converter para coordenadas centralizadas (-1 a 1) com suavização
+            setMousePosition({
+              x: (x - 0.5) * 2,
+              y: (y - 0.5) * 2
+            });
+          }
+        });
+      };
+
+      window.addEventListener('mousemove', handleMouseMove);
+      
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        cancelAnimationFrame(frameId);
+      };
+    }
+  }, [isMobile]);
+
   // Manipular dados do giroscópio
   const handleGyroscope = (event: DeviceOrientationEvent) => {
     // Limitar a taxa de atualização para melhor performance
@@ -73,24 +105,57 @@ function App() {
     });
   };
 
-  // Calcular o efeito parallax baseado no giroscópio ou scroll
-  const calculateParallax = () => {
+  // Calcular o efeito parallax baseado no giroscópio ou mouse
+  const calculateParallax = (intensity: number = 1) => {
     if (isMobile && hasGyroscope) {
-      // Converter dados do giroscópio em movimento parallax
-      const betaMovement = (gyroData.beta / 180) * 30; // Movimento vertical
-      const gammaMovement = (gyroData.gamma / 90) * 30; // Movimento horizontal
+      // Efeito do giroscópio para mobile
+      const betaMovement = (gyroData.beta / 180) * 30 * intensity;
+      const gammaMovement = (gyroData.gamma / 90) * 30 * intensity;
       
       return {
         transform: `translate(${gammaMovement}px, ${betaMovement}px)`,
         transition: 'transform 0.1s ease-out'
       };
+    } else if (!isMobile) {
+      // Efeito do mouse para desktop - mais suave
+      const xMovement = mousePosition.x * 15 * intensity;
+      const yMovement = mousePosition.y * 15 * intensity;
+      
+      return {
+        transform: `translate3d(${xMovement}px, ${yMovement}px, 0) translateY(${scrollY * 0.4}px)`,
+        transition: 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)'
+      };
     } else {
-      // Efeito parallax baseado em scroll para desktop
+      // Fallback para scroll simples
       return {
         transform: `translateY(${scrollY * 0.4}px)`,
-        transition: 'transform 0.1s ease-out'
+        transition: 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)'
       };
     }
+  };
+
+  // Calcular rotação 3D baseada no mouse ou giroscópio
+  const calculate3DRotation = (intensity: number = 1) => {
+    if (isMobile && hasGyroscope) {
+      const rotateX = (gyroData.beta / 180) * 20 * intensity;
+      const rotateY = (gyroData.gamma / 90) * 20 * intensity;
+      
+      return {
+        transform: `rotateX(${-rotateX}deg) rotateY(${rotateY}deg)`,
+        transition: 'transform 0.1s ease-out'
+      };
+    } else if (!isMobile) {
+      // Rotação mais suave para desktop
+      const rotateX = mousePosition.y * 10 * intensity;
+      const rotateY = mousePosition.x * 10 * intensity;
+      
+      return {
+        transform: `perspective(2000px) rotateX(${-rotateX}deg) rotateY(${rotateY}deg)`,
+        transition: 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)'
+      };
+    }
+    
+    return {};
   };
 
   // Efeito para o parallax
@@ -297,31 +362,23 @@ function App() {
         >
           {/* Background com parallax */}
           <div 
-            className="absolute inset-0 bg-cover bg-center z-0" 
+            className="absolute inset-0 bg-cover bg-center z-0 transform-gpu" 
             style={{ 
               backgroundImage: "url('https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=2070&auto=format&fit=crop')",
-              ...calculateParallax()
+              ...calculateParallax(0.5)
             }}
           ></div>
           
-          {/* Overlay com efeito parallax inverso para profundidade */}
+          {/* Overlay com efeito parallax inverso */}
           <div 
-            className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/20 z-1"
-            style={isMobile && hasGyroscope ? {
-              transform: `translate(${-gyroData.gamma / 90 * 10}px, ${-gyroData.beta / 180 * 10}px)`,
-              transition: 'transform 0.1s ease-out'
-            } : {}}
+            className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/20 z-1 transform-gpu"
+            style={calculate3DRotation(0.2)}
           ></div>
           
-          {/* Marca d'água R com efeito parallax mais intenso */}
+          {/* Marca d'água com efeito parallax intenso */}
           <div 
-            className="hero-watermark right-1/4 top-1/2 transform -translate-y-1/2" 
-            style={isMobile && hasGyroscope ? {
-              transform: `translate(-50%, -50%) translate(${gyroData.gamma}px, ${gyroData.beta}px)`,
-              transition: 'transform 0.1s ease-out'
-            } : {
-              transform: `translate(-50%, -50%) translateY(${scrollY * 0.2}px)`
-            }}
+            className="hero-watermark right-1/4 top-1/2 transform -translate-y-1/2 transform-gpu" 
+            style={calculateParallax(2)}
             aria-hidden="true"
           >
             ®
@@ -329,13 +386,8 @@ function App() {
           
           {/* Conteúdo com efeito parallax suave */}
           <div 
-            className="container mx-auto px-4 md:px-6 relative z-10 py-20 md:py-32"
-            style={isMobile && hasGyroscope ? {
-              transform: `translate(${gyroData.gamma / 90 * 5}px, ${gyroData.beta / 180 * 5}px)`,
-              transition: 'transform 0.1s ease-out'
-            } : {
-              transform: `translateY(${scrollY * -0.1}px)`
-            }}
+            className="container mx-auto px-4 md:px-6 relative z-10 py-20 md:py-32 transform-gpu"
+            style={calculateParallax(0.3)}
           >
             <div className="max-w-2xl">
               {/* Logo/Título */}
@@ -367,12 +419,12 @@ function App() {
             </div>
           </div>
 
-          {/* Indicador de giroscópio para dispositivos móveis */}
-          {isMobile && hasGyroscope && (
+          {/* Indicador de efeito 3D */}
+          {((isMobile && hasGyroscope) || !isMobile) && (
             <div className="fixed bottom-4 left-4 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 text-white text-sm z-50">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                Efeito 3D ativo
+                Efeito 3D {isMobile ? 'giroscópio' : 'mouse'} ativo
               </div>
             </div>
           )}
