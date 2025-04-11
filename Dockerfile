@@ -4,17 +4,18 @@ FROM node:22-alpine
 # Criar diretório da aplicação
 WORKDIR /app
 
-# Copiar arquivos de dependências
-COPY package*.json ./
-
 # Instalar dependências
+COPY package.json ./
 RUN npm install
 
-# Copiar código fonte
+# Copiar o resto dos arquivos
 COPY . .
 
 # Construir a aplicação
 RUN npm run build
+
+# Limpar dependências de desenvolvimento e instalar apenas produção
+RUN npm prune --production
 
 # Expor a porta que o servidor vai usar
 EXPOSE 3000
