@@ -108,59 +108,58 @@ function App() {
   // Calcular o efeito parallax baseado no giroscópio ou mouse
   const calculateParallax = (intensity: number = 1, depth: number = 0) => {
     if (isMobile && hasGyroscope) {
-      // Efeito do giroscópio aprimorado para mobile
-      const betaMovement = (gyroData.beta / 180) * 25 * intensity;
-      const gammaMovement = (gyroData.gamma / 90) * 25 * intensity;
-      const depthFactor = 1 + (depth * 0.1); // Adiciona profundidade baseada na camada
+      // Efeito do giroscópio suavizado para mobile
+      const betaMovement = (gyroData.beta / 180) * 15 * intensity;
+      const gammaMovement = (gyroData.gamma / 90) * 15 * intensity;
+      const depthFactor = 1 + (depth * 0.05); // Reduzido de 0.1 para 0.05
       
       return {
         transform: `translate3d(${gammaMovement * depthFactor}px, ${betaMovement * depthFactor}px, ${depth}px) 
-                   rotateX(${-betaMovement * 0.1}deg) rotateY(${gammaMovement * 0.1}deg)`,
-        transition: 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)'
+                   rotateX(${-betaMovement * 0.05}deg) rotateY(${gammaMovement * 0.05}deg)`,
+        transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
       };
     } else if (!isMobile) {
-      // Desktop permanece o mesmo
-      const xMovement = mousePosition.x * 15 * intensity;
-      const yMovement = mousePosition.y * 15 * intensity;
+      // Desktop com movimento mais suave
+      const xMovement = mousePosition.x * 10 * intensity;
+      const yMovement = mousePosition.y * 10 * intensity;
       
       return {
-        transform: `translate3d(${xMovement}px, ${yMovement}px, ${depth}px) translateY(${scrollY * 0.4}px)`,
-        transition: 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)'
+        transform: `translate3d(${xMovement}px, ${yMovement}px, ${depth}px) translateY(${scrollY * 0.3}px)`,
+        transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
       };
     }
     
     return {
-      transform: `translateY(${scrollY * 0.4}px)`,
-      transition: 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)'
+      transform: `translateY(${scrollY * 0.3}px)`,
+      transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
     };
   };
 
-  // Calcular rotação 3D aprimorada
+  // Calcular rotação 3D aprimorada e mais suave
   const calculate3DRotation = (intensity: number = 1, depth: number = 0) => {
     if (isMobile && hasGyroscope) {
-      const betaAngle = (gyroData.beta / 180) * 15 * intensity;
-      const gammaAngle = (gyroData.gamma / 90) * 15 * intensity;
-      const depthFactor = 1 + (depth * 0.05);
+      const betaAngle = (gyroData.beta / 180) * 10 * intensity;
+      const gammaAngle = (gyroData.gamma / 90) * 10 * intensity;
+      const depthFactor = 1 + (depth * 0.03);
       
       return {
         transform: `
-          perspective(2000px)
+          perspective(2500px)
           rotateX(${-betaAngle * depthFactor}deg) 
           rotateY(${gammaAngle * depthFactor}deg)
-          translateZ(${depth * 2}px)
-          scale(${1 + depth * 0.001})
+          translateZ(${depth * 1.5}px)
+          scale(${1 + depth * 0.0008})
         `,
         transformOrigin: 'center center',
-        transition: 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)'
+        transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
       };
     } else if (!isMobile) {
-      // Desktop permanece o mesmo
-      const rotateX = mousePosition.y * 10 * intensity;
-      const rotateY = mousePosition.x * 10 * intensity;
+      const rotateX = mousePosition.y * 7 * intensity;
+      const rotateY = mousePosition.x * 7 * intensity;
       
       return {
-        transform: `perspective(2000px) rotateX(${-rotateX}deg) rotateY(${rotateY}deg) translateZ(${depth}px)`,
-        transition: 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)'
+        transform: `perspective(2500px) rotateX(${-rotateX}deg) rotateY(${rotateY}deg) translateZ(${depth}px)`,
+        transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
       };
     }
     
@@ -323,12 +322,12 @@ function App() {
             {/* Botão de Telefone */}
             <a 
               href="tel:+551233410600" 
-              className="bg-yellow-500 hover:bg-yellow-400 text-gray-800 font-bold py-2 px-4 rounded-lg flex items-center gap-2 text-sm transition-all highlight-hover btn-press group relative overflow-hidden"
+              className="bg-yellow-500 hover:bg-yellow-400 text-gray-800 font-bold py-2 md:px-4 px-2 rounded-lg flex items-center gap-2 text-sm transition-all highlight-hover btn-press group relative overflow-hidden"
               aria-label="Ligar para (12) 3341-0600"
             >
               <span className="absolute inset-0 w-0 group-hover:w-full transition-all duration-300 bg-white opacity-20"></span>
               <PhoneCall className="w-4 h-4 group-hover:rotate-12 transition-transform" aria-hidden="true" />
-              <span className="relative">(12) 3341-0600</span>
+              <span className="hidden md:inline relative">(12) 3341-0600</span>
             </a>
 
             {/* Menu Hamburguer (para mobile) */}
@@ -502,51 +501,51 @@ function App() {
           </nav>
         )}
 
-        {/* Desenvolvimento - Parte 1: Nossos Serviços */}
+      {/* Desenvolvimento - Parte 1: Nossos Serviços */}
         <section id="servicos" className="py-20 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                Soluções Completas em Propriedade Intelectual
-              </h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                Oferecemos um conjunto abrangente de serviços para proteger e valorizar seu patrimônio intelectual
-              </p>
-            </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[
-                {
-                  icon: <Scale className="w-12 h-12 text-blue-600" />,
-                  title: "Registro de Marcas",
-                  description: "Proteção legal completa para sua marca em território nacional e internacional"
-                },
-                {
-                  icon: <Shield className="w-12 h-12 text-blue-600" />,
-                  title: "Monitoramento",
-                  description: "Vigilância constante contra violações e uso indevido da sua marca"
-                },
-                {
-                  icon: <BookOpen className="w-12 h-12 text-blue-600" />,
-                  title: "Consultoria Especializada",
-                  description: "Orientação estratégica para maximizar o valor da sua propriedade intelectual"
-                }
-              ].map((service, index) => (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Soluções Completas em Propriedade Intelectual
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Oferecemos um conjunto abrangente de serviços para proteger e valorizar seu patrimônio intelectual
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              {
+                icon: <Scale className="w-12 h-12 text-blue-600" />,
+                title: "Registro de Marcas",
+                description: "Proteção legal completa para sua marca em território nacional e internacional"
+              },
+              {
+                icon: <Shield className="w-12 h-12 text-blue-600" />,
+                title: "Monitoramento",
+                description: "Vigilância constante contra violações e uso indevido da sua marca"
+              },
+              {
+                icon: <BookOpen className="w-12 h-12 text-blue-600" />,
+                title: "Consultoria Especializada",
+                description: "Orientação estratégica para maximizar o valor da sua propriedade intelectual"
+              }
+            ].map((service, index) => (
                 <div key={index} className="bg-gray-50 p-8 rounded-xl hover:shadow-xl transition-all highlight-hover">
                   <div className="transform transition-transform hover:scale-110 inline-block mb-2">
-                    {service.icon}
+                {service.icon}
                   </div>
-                  <h3 className="text-xl font-bold mt-4 mb-2">{service.title}</h3>
-                  <p className="text-gray-600">{service.description}</p>
-                </div>
-              ))}
-            </div>
+                <h3 className="text-xl font-bold mt-4 mb-2">{service.title}</h3>
+                <p className="text-gray-600">{service.description}</p>
+              </div>
+            ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* PartnersCarousel */}
-        <section id="parceiros">
+{/* PartnersCarousel */}
+<section id="parceiros">
           <PartnersCarousel />
-        </section>
+      </section>
 
         {/* Seção Credenciamento INPI */}
         <section id="credenciamento" className="py-12 bg-white">
@@ -569,11 +568,11 @@ function App() {
 
         {/* Desenvolvimento - Parte 2: Vantagens (anteriormente Diferenciais) */}
         <section id="vantagens" className="py-20 bg-gray-100">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-4xl font-bold text-blue-900 mb-4">
                 A marca é um dos patrimônios mais valiosos.
-              </h2>
+          </h2>
               <p className="text-xl text-gray-600 max-w-3xl mx-auto">
                 Confira as vantagens de ter a sua marca registrada:
               </p>
@@ -610,14 +609,14 @@ function App() {
                   className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-shadow text-center transform hover:-translate-y-1 highlight-hover"
                 >
                   <div className="flex justify-center mb-6 transform transition-all hover:scale-110 hover:rotate-3 duration-300">
-                    {vantagem.icon}
+                      {vantagem.icon}
                   </div>
                   <p className="text-gray-700 text-lg">{vantagem.description}</p>
-                </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-        </section>
+        </div>
+      </section>
 
         {/* Seção de Diferenciais */}
         <Diferenciais />
@@ -729,82 +728,82 @@ function App() {
               <button className="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold py-4 px-8 rounded-lg text-lg transition-all shadow-md">
                 SOLICITAR ORÇAMENTO
               </button>
-            </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Desenvolvimento - Parte 3: Processo */}
+      {/* Desenvolvimento - Parte 3: Processo */}
         <section id="processo" className="py-20 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                Como Funciona o Processo?
-              </h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                Metodologia simplificada e transparente para o registro da sua marca
-              </p>
-            </div>
-            <div className="relative">
-              <div className="hidden md:block absolute left-0 right-0 top-1/2 h-1 bg-gradient-to-r from-blue-100 via-blue-500 to-blue-100 transform -translate-y-1/2"></div>
-              <div className="grid md:grid-cols-4 gap-8 relative">
-                {[
-                  {
-                    step: "1",
-                    icon: <Search className="w-8 h-8" />,
-                    title: "Análise Inicial",
-                    description: "Avaliação gratuita da viabilidade do seu registro",
-                    details: ["Pesquisa de anterioridade", "Análise de concorrência", "Verificação de disponibilidade"]
-                  },
-                  {
-                    step: "2",
-                    icon: <FileText className="w-8 h-8" />,
-                    title: "Estratégia",
-                    description: "Planejamento personalizado para sua marca",
-                    details: ["Definição de classes", "Escolha de territórios", "Plano de proteção"]
-                  },
-                  {
-                    step: "3",
-                    icon: <FileCheck className="w-8 h-8" />,
-                    title: "Registro",
-                    description: "Condução do processo junto ao INPI",
-                    details: ["Preparação documental", "Protocolo do pedido", "Acompanhamento processual"]
-                  },
-                  {
-                    step: "4",
-                    icon: <ShieldCheck className="w-8 h-8" />,
-                    title: "Proteção",
-                    description: "Monitoramento contínuo da sua marca",
-                    details: ["Vigilância de mercado", "Defesa contra infrações", "Renovações automáticas"]
-                  }
-                ].map((step, index) => (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Como Funciona o Processo?
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Metodologia simplificada e transparente para o registro da sua marca
+            </p>
+          </div>
+          <div className="relative">
+            <div className="hidden md:block absolute left-0 right-0 top-1/2 h-1 bg-gradient-to-r from-blue-100 via-blue-500 to-blue-100 transform -translate-y-1/2"></div>
+            <div className="grid md:grid-cols-4 gap-8 relative">
+              {[
+                {
+                  step: "1",
+                  icon: <Search className="w-8 h-8" />,
+                  title: "Análise Inicial",
+                  description: "Avaliação gratuita da viabilidade do seu registro",
+                  details: ["Pesquisa de anterioridade", "Análise de concorrência", "Verificação de disponibilidade"]
+                },
+                {
+                  step: "2",
+                  icon: <FileText className="w-8 h-8" />,
+                  title: "Estratégia",
+                  description: "Planejamento personalizado para sua marca",
+                  details: ["Definição de classes", "Escolha de territórios", "Plano de proteção"]
+                },
+                {
+                  step: "3",
+                  icon: <FileCheck className="w-8 h-8" />,
+                  title: "Registro",
+                  description: "Condução do processo junto ao INPI",
+                  details: ["Preparação documental", "Protocolo do pedido", "Acompanhamento processual"]
+                },
+                {
+                  step: "4",
+                  icon: <ShieldCheck className="w-8 h-8" />,
+                  title: "Proteção",
+                  description: "Monitoramento contínuo da sua marca",
+                  details: ["Vigilância de mercado", "Defesa contra infrações", "Renovações automáticas"]
+                }
+              ].map((step, index) => (
                   <div 
                     key={index} 
                     className="relative bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-2 duration-300 highlight-hover"
                   >
-                    <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                       <div className="bg-blue-900 text-white w-12 h-12 rounded-full flex items-center justify-center font-bold relative z-10 hover:scale-110 transition-transform">
-                        <div className="absolute inset-0 bg-blue-600 rounded-full animate-pulse opacity-50"></div>
-                        {step.icon}
-                      </div>
-                    </div>
-                    <div className="mt-8 text-center">
-                      <h3 className="text-xl font-bold mb-3 text-blue-900">{step.title}</h3>
-                      <p className="text-gray-600 mb-4">{step.description}</p>
-                      <ul className="text-sm text-gray-500 space-y-2">
-                        {step.details.map((detail, idx) => (
-                          <li key={idx} className="flex items-center justify-center gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-blue-500" />
-                            {detail}
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="absolute inset-0 bg-blue-600 rounded-full animate-pulse opacity-50"></div>
+                      {step.icon}
                     </div>
                   </div>
-                ))}
-              </div>
+                  <div className="mt-8 text-center">
+                    <h3 className="text-xl font-bold mb-3 text-blue-900">{step.title}</h3>
+                    <p className="text-gray-600 mb-4">{step.description}</p>
+                    <ul className="text-sm text-gray-500 space-y-2">
+                      {step.details.map((detail, idx) => (
+                        <li key={idx} className="flex items-center justify-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-blue-500" />
+                          {detail}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
         {/* Seção de Vídeos e Depoimentos */}
         <VideoTestimonialSection />
@@ -946,13 +945,13 @@ function App() {
                 </svg>
                 Fale pelo WhatsApp
               </a>
-            </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Footer com Referências */}
+      {/* Footer com Referências */}
         <footer className="bg-gray-900 text-gray-400 py-8 md:py-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
               <div className="text-center md:text-left">
                 <img 
@@ -963,21 +962,21 @@ function App() {
                   width="180"
                   height="64"
                 />
-                <h3 className="text-white font-bold mb-4">Legado Marcas</h3>
-                <p className="text-sm">
-                  Especialistas em propriedade intelectual, oferecendo soluções completas para proteção de marcas e patentes.
-                </p>
-              </div>
+              <h3 className="text-white font-bold mb-4">Legado Marcas</h3>
+              <p className="text-sm">
+                Especialistas em propriedade intelectual, oferecendo soluções completas para proteção de marcas e patentes.
+              </p>
+            </div>
               <div className="text-center md:text-left">
-                <h3 className="text-white font-bold mb-4">Certificações</h3>
+              <h3 className="text-white font-bold mb-4">Certificações</h3>
                 <ul className="text-sm space-y-2">
-                  <li>Registro INPI nº 12345</li>
-                  <li>ISO 9001:2015</li>
-                  <li>Membro ABPI</li>
-                </ul>
-              </div>
+                <li>Registro INPI nº 12345</li>
+                <li>ISO 9001:2015</li>
+                <li>Membro ABPI</li>
+              </ul>
+            </div>
               <div className="text-center md:text-left">
-                <h3 className="text-white font-bold mb-4">Contato</h3>
+              <h3 className="text-white font-bold mb-4">Contato</h3>
                 <ul className="text-sm space-y-2">
                   <li>
                     <a href="mailto:contato@legadomarcas.com.br" className="hover:text-white transition-colors">
@@ -989,62 +988,62 @@ function App() {
                       (12) 3341-0600
                     </a>
                   </li>
-                  <li>São Paulo - SP</li>
-                </ul>
-              </div>
+                <li>São Paulo - SP</li>
+              </ul>
             </div>
-            
-            <div className="my-10 flex flex-col items-center justify-center">
-              <div className="bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 p-0.5 rounded-xl shadow-lg max-w-sm w-full">
-                <div className="bg-gray-900 rounded-xl p-5 transition-all duration-300 group hover:bg-gray-800/80">
-                  <div className="flex flex-col items-center">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="text-green-400 animate-pulse">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                          <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <p className="text-white font-medium">Confira nossa reputação:</p>
+          </div>
+          
+          <div className="my-10 flex flex-col items-center justify-center">
+            <div className="bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 p-0.5 rounded-xl shadow-lg max-w-sm w-full">
+              <div className="bg-gray-900 rounded-xl p-5 transition-all duration-300 group hover:bg-gray-800/80">
+                <div className="flex flex-col items-center">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="text-green-400 animate-pulse">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                        <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                      </svg>
                     </div>
+                    <p className="text-white font-medium">Confira nossa reputação:</p>
+                  </div>
+                  
+                  <div className="relative overflow-hidden rounded-lg transition-all duration-300 transform group-hover:scale-105">
+                    <div className="absolute -inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-green-400/0 via-green-400/20 to-green-400/0 blur-sm transform -skew-x-12 -translate-x-full group-hover:translate-x-[400%] transition-all duration-1500 ease-in-out"></div>
                     
-                    <div className="relative overflow-hidden rounded-lg transition-all duration-300 transform group-hover:scale-105">
-                      <div className="absolute -inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-r from-green-400/0 via-green-400/20 to-green-400/0 blur-sm transform -skew-x-12 -translate-x-full group-hover:translate-x-[400%] transition-all duration-1500 ease-in-out"></div>
-                      
-                      <a 
-                        href="https://www.reclameaqui.com.br/empresa/legado-marcas-e-patentes/" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        aria-label="Legado Marcas e Patentes no Reclame Aqui"
-                        className="block"
-                      >
-                        <img 
-                          loading="lazy" 
-                          decoding="async" 
-                          width="318" 
-                          height="68" 
-                          src="https://legadomarcas.com.br/wp-content/uploads/2021/01/Screenshot_2.png" 
-                          alt="Legado Marcas e Patentes no Reclame Aqui"
-                          className="w-full h-auto object-contain transition-transform duration-500 group-hover:brightness-110"
-                        />
-                      </a>
-                    </div>
+                    <a 
+                      href="https://www.reclameaqui.com.br/empresa/legado-marcas-e-patentes/" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      aria-label="Legado Marcas e Patentes no Reclame Aqui"
+                      className="block"
+                    >
+                      <img 
+                        loading="lazy" 
+                        decoding="async" 
+                        width="318" 
+                        height="68" 
+                        src="https://legadomarcas.com.br/wp-content/uploads/2021/01/Screenshot_2.png" 
+                        alt="Legado Marcas e Patentes no Reclame Aqui"
+                        className="w-full h-auto object-contain transition-transform duration-500 group-hover:brightness-110"
+                      />
+                    </a>
                   </div>
                 </div>
               </div>
             </div>
-            
-            <div className="border-t border-gray-800 pt-8 text-center">
-              <p className="text-sm">
-                © {new Date().getFullYear()} Legado Marcas. Todos os direitos reservados.
-              </p>
-            </div>
           </div>
-        </footer>
+          
+          <div className="border-t border-gray-800 pt-8 text-center">
+            <p className="text-sm">
+                © {new Date().getFullYear()} Legado Marcas. Todos os direitos reservados.
+            </p>
+          </div>
+        </div>
+      </footer>
 
-        {/* ChatBot */}
-        <ChatBot 
+      {/* ChatBot */}
+      <ChatBot 
           webhookUrl={import.meta.env.VITE_WEBHOOK_URL}
-        />
+      />
       </main>
     </div>
   );

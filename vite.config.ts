@@ -8,21 +8,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    sourcemap: false,
-    target: 'es2020',
-    minify: 'terser',
-    ssr: false,
-    rollupOptions: {
-      input: {
-        main: resolve(__dirname, 'index.html')
-      },
-      output: {
-        manualChunks: undefined
-      }
-    }
-  },
-  optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom']
+    sourcemap: false
   },
   server: {
     port: 3000,
