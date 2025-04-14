@@ -1,29 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowDown, CheckCircle2, Trophy, Users2, Zap, PhoneCall, Scale, Shield, Clock, Star, BookOpen, Award, Search, FileCheck, FileText, ShieldCheck, Globe, ShieldOff, TrendingUp, BadgeCheck, AlertTriangle, XCircle, Menu, X, Timer, Mail, ChevronRight, PhoneOutgoing, ExternalLink, Facebook, Instagram, Linkedin, Youtube } from 'lucide-react';
 import ChatBot from './components/ChatBot';
 import PartnersCarousel from './components/PartnersCarousel';
 import VideoTestimonialSection from './components/VideoTestimonialSection';
 import Diferenciais from './components/Diferenciais';
 import ContactForm from './components/ContactForm';
-
-// Interfaces para tipos de estilo
-interface ParallaxStyle extends CSSProperties {
-  transform: string;
-  transition: string;
-  willChange: 'transform';
-  backfaceVisibility: 'hidden';
-  WebkitFontSmoothing: 'antialiased';
-  perspective?: string;
-}
-
-interface Rotation3DStyle extends CSSProperties {
-  transform: string;
-  transformOrigin?: 'center center';
-  transition: string;
-  willChange: 'transform';
-  backfaceVisibility: 'hidden';
-  WebkitFontSmoothing: 'antialiased';
-}
 
 function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -82,166 +63,122 @@ function App() {
     };
   }, [isMobile, hasGyroscope]);
 
-  // Função de throttle para limitar a taxa de atualizações
-  const throttle = useCallback((func: Function, limit: number) => {
-    let inThrottle: boolean;
-    return (...args: any[]) => {
-      if (!inThrottle) {
-        func(...args);
-        inThrottle = true;
-        setTimeout(() => inThrottle = false, limit);
-      }
-    };
-  }, []);
-
-  // Otimizar cálculos de movimento com useCallback
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    const rect = document.querySelector('.hero-minimalista')?.getBoundingClientRect();
-    if (rect) {
-      const x = (e.clientX - rect.left) / rect.width;
-      const y = (e.clientY - rect.top) / rect.height;
-      
-      requestAnimationFrame(() => {
-        setMousePosition({
-          x: (x - 0.5) * 2,
-          y: (y - 0.5) * 2
-        });
-      });
-    }
-  }, []);
-
-  // Otimizar handler do giroscópio com throttle
-  const handleGyroscope = useCallback((event: DeviceOrientationEvent) => {
-    requestAnimationFrame(() => {
-      setGyroData({
-        beta: event.beta || 0,
-        gamma: event.gamma || 0
-      });
-    });
-  }, []);
-
-  // Throttle do handler do giroscópio
-  const throttledGyroHandler = useMemo(() => 
-    throttle(handleGyroscope, 16), // ~60fps
-    [handleGyroscope, throttle]
-  );
-
+  // Manipular movimento do mouse para desktop com debounce
   useEffect(() => {
     if (!isMobile) {
-      const throttledMouseMove = throttle(handleMouseMove, 16);
-      window.addEventListener('mousemove', throttledMouseMove, { passive: true });
+      let frameId: number;
+      const handleMouseMove = (e: MouseEvent) => {
+        cancelAnimationFrame(frameId);
+        frameId = requestAnimationFrame(() => {
+          // Calcular a posição relativa do mouse com suavização
+          const rect = document.querySelector('.hero-minimalista')?.getBoundingClientRect();
+          if (rect) {
+            const x = (e.clientX - rect.left) / rect.width;
+            const y = (e.clientY - rect.top) / rect.height;
+            
+            // Converter para coordenadas centralizadas (-1 a 1) com suavização
+            setMousePosition({
+              x: (x - 0.5) * 2,
+              y: (y - 0.5) * 2
+            });
+          }
+        });
+      };
+
+      window.addEventListener('mousemove', handleMouseMove);
       
       return () => {
-        window.removeEventListener('mousemove', throttledMouseMove);
+        window.removeEventListener('mousemove', handleMouseMove);
+        cancelAnimationFrame(frameId);
       };
     }
-  }, [isMobile, handleMouseMove, throttle]);
+  }, [isMobile]);
 
-  useEffect(() => {
-    if (hasGyroscope) {
-      window.addEventListener('deviceorientation', throttledGyroHandler, { passive: true });
-      
-      return () => {
-        window.removeEventListener('deviceorientation', throttledGyroHandler);
-      };
-    }
-  }, [hasGyroscope, throttledGyroHandler]);
+  // Manipular dados do giroscópio
+  const handleGyroscope = (event: DeviceOrientationEvent) => {
+    // Limitar a taxa de atualização para melhor performance
+    requestAnimationFrame(() => {
+      setGyroData({
+        beta: event.beta || 0,  // Inclinação frontal/traseira (-180 a 180)
+        gamma: event.gamma || 0  // Inclinação esquerda/direita (-90 a 90)
+      });
+    });
+  };
 
-  // Memoizar cálculos de parallax
-  const calculateParallax = useCallback((intensity: number = 1, depth: number = 0): ParallaxStyle => {
+  // Calcular o efeito parallax baseado no giroscópio ou mouse
+  const calculateParallax = (intensity: number = 1, depth: number = 0) => {
     if (isMobile && hasGyroscope) {
-      const betaMovement = (gyroData.beta / 180) * 15 * intensity;
-      const gammaMovement = (gyroData.gamma / 90) * 15 * intensity;
-      const depthFactor = 1 + (depth * 0.05);
+      // Efeito do giroscópio aprimorado para mobile
+      const betaMovement = (gyroData.beta / 180) * 25 * intensity;
+      const gammaMovement = (gyroData.gamma / 90) * 25 * intensity;
+      const depthFactor = 1 + (depth * 0.1); // Adiciona profundidade baseada na camada
       
       return {
         transform: `translate3d(${gammaMovement * depthFactor}px, ${betaMovement * depthFactor}px, ${depth}px) 
-                   rotateX(${-betaMovement * 0.05}deg) rotateY(${gammaMovement * 0.05}deg)`,
-        transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
-        willChange: 'transform',
-        backfaceVisibility: 'hidden',
-        WebkitFontSmoothing: 'antialiased',
-        perspective: '1000px'
+                   rotateX(${-betaMovement * 0.1}deg) rotateY(${gammaMovement * 0.1}deg)`,
+        transition: 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)'
       };
     } else if (!isMobile) {
-      const xMovement = mousePosition.x * 10 * intensity;
-      const yMovement = mousePosition.y * 10 * intensity;
+      // Desktop permanece o mesmo
+      const xMovement = mousePosition.x * 15 * intensity;
+      const yMovement = mousePosition.y * 15 * intensity;
       
       return {
-        transform: `translate3d(${xMovement}px, ${yMovement}px, ${depth}px) translateY(${scrollY * 0.3}px)`,
-        transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
-        willChange: 'transform',
-        backfaceVisibility: 'hidden',
-        WebkitFontSmoothing: 'antialiased'
+        transform: `translate3d(${xMovement}px, ${yMovement}px, ${depth}px) translateY(${scrollY * 0.4}px)`,
+        transition: 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)'
       };
     }
     
     return {
-      transform: `translateY(${scrollY * 0.3}px)`,
-      transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
-      willChange: 'transform',
-      backfaceVisibility: 'hidden',
-      WebkitFontSmoothing: 'antialiased'
+      transform: `translateY(${scrollY * 0.4}px)`,
+      transition: 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)'
     };
-  }, [isMobile, hasGyroscope, gyroData, mousePosition, scrollY]);
+  };
 
-  // Memoizar cálculos de rotação 3D
-  const calculate3DRotation = useCallback((intensity: number = 1, depth: number = 0): Rotation3DStyle => {
+  // Calcular rotação 3D aprimorada
+  const calculate3DRotation = (intensity: number = 1, depth: number = 0) => {
     if (isMobile && hasGyroscope) {
-      const betaAngle = (gyroData.beta / 180) * 10 * intensity;
-      const gammaAngle = (gyroData.gamma / 90) * 10 * intensity;
-      const depthFactor = 1 + (depth * 0.03);
+      const betaAngle = (gyroData.beta / 180) * 15 * intensity;
+      const gammaAngle = (gyroData.gamma / 90) * 15 * intensity;
+      const depthFactor = 1 + (depth * 0.05);
       
       return {
         transform: `
-          perspective(2500px)
+          perspective(2000px)
           rotateX(${-betaAngle * depthFactor}deg) 
           rotateY(${gammaAngle * depthFactor}deg)
-          translateZ(${depth * 1.5}px)
-          scale3d(${1 + depth * 0.0008}, ${1 + depth * 0.0008}, 1)
+          translateZ(${depth * 2}px)
+          scale(${1 + depth * 0.001})
         `,
         transformOrigin: 'center center',
-        transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
-        willChange: 'transform',
-        backfaceVisibility: 'hidden',
-        WebkitFontSmoothing: 'antialiased'
+        transition: 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)'
       };
     } else if (!isMobile) {
-      const rotateX = mousePosition.y * 7 * intensity;
-      const rotateY = mousePosition.x * 7 * intensity;
+      // Desktop permanece o mesmo
+      const rotateX = mousePosition.y * 10 * intensity;
+      const rotateY = mousePosition.x * 10 * intensity;
       
       return {
-        transform: `perspective(2500px) rotateX(${-rotateX}deg) rotateY(${rotateY}deg) translateZ(${depth}px)`,
-        transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
-        willChange: 'transform',
-        backfaceVisibility: 'hidden',
-        WebkitFontSmoothing: 'antialiased'
+        transform: `perspective(2000px) rotateX(${-rotateX}deg) rotateY(${rotateY}deg) translateZ(${depth}px)`,
+        transition: 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1)'
       };
     }
     
-    return {
-      transform: 'none',
-      transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
-      willChange: 'transform',
-      backfaceVisibility: 'hidden',
-      WebkitFontSmoothing: 'antialiased'
-    };
-  }, [isMobile, hasGyroscope, gyroData, mousePosition]);
+    return {};
+  };
 
-  // Otimizar o handler de scroll
+  // Efeito para o parallax
   useEffect(() => {
-    const handleScroll = throttle(() => {
-      requestAnimationFrame(() => {
-        setScrollY(window.scrollY);
-      });
-    }, 16);
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [throttle]);
+  }, []);
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -424,21 +361,17 @@ function App() {
         )}
       </header>
 
-      {/* Hero Section com Parallax Otimizado */}
+      {/* Hero Section com Parallax */}
       <main className="pt-16 md:pt-0">
         <section
           id="home"
-          className="hero-minimalista relative overflow-hidden min-h-[80vh] md:min-h-screen will-change-transform"
+          className="hero-minimalista relative overflow-hidden min-h-[80vh] md:min-h-screen"
           aria-label="Seção principal"
           role="banner"
-          style={{
-            perspective: '2500px',
-            transformStyle: 'preserve-3d'
-          }}
         >
           {/* Background com parallax profundo */}
           <div 
-            className="absolute inset-0 bg-cover bg-center z-0 transform-gpu will-change-transform" 
+            className="absolute inset-0 bg-cover bg-center z-0 transform-gpu" 
             style={{ 
               backgroundImage: "url('https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=2070&auto=format&fit=crop')",
               ...calculateParallax(0.5, -20)
@@ -501,19 +434,6 @@ function App() {
               </a>
             </div>
           </div>
-
-          {/* Indicador de efeito 3D com profundidade */}
-          {((isMobile && hasGyroscope) || !isMobile) && (
-            <div 
-              className="fixed bottom-4 left-4 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 text-white text-sm z-50 transform-gpu"
-              style={calculateParallax(0.2, 70)}
-            >
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                Efeito 3D {isMobile ? 'giroscópio' : 'mouse'} ativo
-              </div>
-            </div>
-          )}
         </section>
 
         {/* Mobile Menu Aprimorado */}
