@@ -1,10 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { ArrowDown, CheckCircle2, Trophy, Users2, Zap, PhoneCall, Scale, Shield, Clock, Star, BookOpen, Award, Search, FileCheck, FileText, ShieldCheck, Globe, ShieldOff, TrendingUp, BadgeCheck, AlertTriangle, XCircle, Menu, X, Timer, Mail, ChevronRight, PhoneOutgoing, ExternalLink, Facebook, Instagram, Linkedin, Youtube } from 'lucide-react';
 import ChatBot from './components/ChatBot';
 import PartnersCarousel from './components/PartnersCarousel';
 import VideoTestimonialSection from './components/VideoTestimonialSection';
 import Diferenciais from './components/Diferenciais';
 import ContactForm from './components/ContactForm';
+
+// Interfaces para tipos de estilo
+interface ParallaxStyle extends CSSProperties {
+  transform: string;
+  transition: string;
+  willChange: 'transform';
+  backfaceVisibility: 'hidden';
+  WebkitFontSmoothing: 'antialiased';
+  perspective?: string;
+}
+
+interface Rotation3DStyle extends CSSProperties {
+  transform: string;
+  transformOrigin?: 'center center';
+  transition: string;
+  willChange: 'transform';
+  backfaceVisibility: 'hidden';
+  WebkitFontSmoothing: 'antialiased';
+}
 
 function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -63,80 +82,111 @@ function App() {
     };
   }, [isMobile, hasGyroscope]);
 
-  // Manipular movimento do mouse para desktop com debounce
-  useEffect(() => {
-    if (!isMobile) {
-      let frameId: number;
-      const handleMouseMove = (e: MouseEvent) => {
-        cancelAnimationFrame(frameId);
-        frameId = requestAnimationFrame(() => {
-          // Calcular a posição relativa do mouse com suavização
-          const rect = document.querySelector('.hero-minimalista')?.getBoundingClientRect();
-          if (rect) {
-            const x = (e.clientX - rect.left) / rect.width;
-            const y = (e.clientY - rect.top) / rect.height;
-            
-            // Converter para coordenadas centralizadas (-1 a 1) com suavização
-            setMousePosition({
-              x: (x - 0.5) * 2,
-              y: (y - 0.5) * 2
-            });
-          }
-        });
-      };
+  // Função de throttle para limitar a taxa de atualizações
+  const throttle = useCallback((func: Function, limit: number) => {
+    let inThrottle: boolean;
+    return (...args: any[]) => {
+      if (!inThrottle) {
+        func(...args);
+        inThrottle = true;
+        setTimeout(() => inThrottle = false, limit);
+      }
+    };
+  }, []);
 
-      window.addEventListener('mousemove', handleMouseMove);
+  // Otimizar cálculos de movimento com useCallback
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    const rect = document.querySelector('.hero-minimalista')?.getBoundingClientRect();
+    if (rect) {
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
       
-      return () => {
-        window.removeEventListener('mousemove', handleMouseMove);
-        cancelAnimationFrame(frameId);
-      };
+      requestAnimationFrame(() => {
+        setMousePosition({
+          x: (x - 0.5) * 2,
+          y: (y - 0.5) * 2
+        });
+      });
     }
-  }, [isMobile]);
+  }, []);
 
-  // Manipular dados do giroscópio
-  const handleGyroscope = (event: DeviceOrientationEvent) => {
-    // Limitar a taxa de atualização para melhor performance
+  // Otimizar handler do giroscópio com throttle
+  const handleGyroscope = useCallback((event: DeviceOrientationEvent) => {
     requestAnimationFrame(() => {
       setGyroData({
-        beta: event.beta || 0,  // Inclinação frontal/traseira (-180 a 180)
-        gamma: event.gamma || 0  // Inclinação esquerda/direita (-90 a 90)
+        beta: event.beta || 0,
+        gamma: event.gamma || 0
       });
     });
-  };
+  }, []);
 
-  // Calcular o efeito parallax baseado no giroscópio ou mouse
-  const calculateParallax = (intensity: number = 1, depth: number = 0) => {
+  // Throttle do handler do giroscópio
+  const throttledGyroHandler = useMemo(() => 
+    throttle(handleGyroscope, 16), // ~60fps
+    [handleGyroscope, throttle]
+  );
+
+  useEffect(() => {
+    if (!isMobile) {
+      const throttledMouseMove = throttle(handleMouseMove, 16);
+      window.addEventListener('mousemove', throttledMouseMove, { passive: true });
+      
+      return () => {
+        window.removeEventListener('mousemove', throttledMouseMove);
+      };
+    }
+  }, [isMobile, handleMouseMove, throttle]);
+
+  useEffect(() => {
+    if (hasGyroscope) {
+      window.addEventListener('deviceorientation', throttledGyroHandler, { passive: true });
+      
+      return () => {
+        window.removeEventListener('deviceorientation', throttledGyroHandler);
+      };
+    }
+  }, [hasGyroscope, throttledGyroHandler]);
+
+  // Memoizar cálculos de parallax
+  const calculateParallax = useCallback((intensity: number = 1, depth: number = 0): ParallaxStyle => {
     if (isMobile && hasGyroscope) {
-      // Efeito do giroscópio suavizado para mobile
       const betaMovement = (gyroData.beta / 180) * 15 * intensity;
       const gammaMovement = (gyroData.gamma / 90) * 15 * intensity;
-      const depthFactor = 1 + (depth * 0.05); // Reduzido de 0.1 para 0.05
+      const depthFactor = 1 + (depth * 0.05);
       
       return {
         transform: `translate3d(${gammaMovement * depthFactor}px, ${betaMovement * depthFactor}px, ${depth}px) 
                    rotateX(${-betaMovement * 0.05}deg) rotateY(${gammaMovement * 0.05}deg)`,
-        transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+        transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+        willChange: 'transform',
+        backfaceVisibility: 'hidden',
+        WebkitFontSmoothing: 'antialiased',
+        perspective: '1000px'
       };
     } else if (!isMobile) {
-      // Desktop com movimento mais suave
       const xMovement = mousePosition.x * 10 * intensity;
       const yMovement = mousePosition.y * 10 * intensity;
       
       return {
         transform: `translate3d(${xMovement}px, ${yMovement}px, ${depth}px) translateY(${scrollY * 0.3}px)`,
-        transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
+        transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+        willChange: 'transform',
+        backfaceVisibility: 'hidden',
+        WebkitFontSmoothing: 'antialiased'
       };
     }
     
     return {
       transform: `translateY(${scrollY * 0.3}px)`,
-      transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
+      transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+      willChange: 'transform',
+      backfaceVisibility: 'hidden',
+      WebkitFontSmoothing: 'antialiased'
     };
-  };
+  }, [isMobile, hasGyroscope, gyroData, mousePosition, scrollY]);
 
-  // Calcular rotação 3D aprimorada e mais suave
-  const calculate3DRotation = (intensity: number = 1, depth: number = 0) => {
+  // Memoizar cálculos de rotação 3D
+  const calculate3DRotation = useCallback((intensity: number = 1, depth: number = 0): Rotation3DStyle => {
     if (isMobile && hasGyroscope) {
       const betaAngle = (gyroData.beta / 180) * 10 * intensity;
       const gammaAngle = (gyroData.gamma / 90) * 10 * intensity;
@@ -148,10 +198,13 @@ function App() {
           rotateX(${-betaAngle * depthFactor}deg) 
           rotateY(${gammaAngle * depthFactor}deg)
           translateZ(${depth * 1.5}px)
-          scale(${1 + depth * 0.0008})
+          scale3d(${1 + depth * 0.0008}, ${1 + depth * 0.0008}, 1)
         `,
         transformOrigin: 'center center',
-        transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+        transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+        willChange: 'transform',
+        backfaceVisibility: 'hidden',
+        WebkitFontSmoothing: 'antialiased'
       };
     } else if (!isMobile) {
       const rotateX = mousePosition.y * 7 * intensity;
@@ -159,25 +212,36 @@ function App() {
       
       return {
         transform: `perspective(2500px) rotateX(${-rotateX}deg) rotateY(${rotateY}deg) translateZ(${depth}px)`,
-        transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
+        transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+        willChange: 'transform',
+        backfaceVisibility: 'hidden',
+        WebkitFontSmoothing: 'antialiased'
       };
     }
     
-    return {};
-  };
-
-  // Efeito para o parallax
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
+    return {
+      transform: 'none',
+      transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+      willChange: 'transform',
+      backfaceVisibility: 'hidden',
+      WebkitFontSmoothing: 'antialiased'
     };
+  }, [isMobile, hasGyroscope, gyroData, mousePosition]);
+
+  // Otimizar o handler de scroll
+  useEffect(() => {
+    const handleScroll = throttle(() => {
+      requestAnimationFrame(() => {
+        setScrollY(window.scrollY);
+      });
+    }, 16);
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, []);
+  }, [throttle]);
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -360,17 +424,21 @@ function App() {
         )}
       </header>
 
-      {/* Hero Section com Parallax */}
+      {/* Hero Section com Parallax Otimizado */}
       <main className="pt-16 md:pt-0">
         <section
           id="home"
-          className="hero-minimalista relative overflow-hidden min-h-[80vh] md:min-h-screen"
+          className="hero-minimalista relative overflow-hidden min-h-[80vh] md:min-h-screen will-change-transform"
           aria-label="Seção principal"
           role="banner"
+          style={{
+            perspective: '2500px',
+            transformStyle: 'preserve-3d'
+          }}
         >
           {/* Background com parallax profundo */}
           <div 
-            className="absolute inset-0 bg-cover bg-center z-0 transform-gpu" 
+            className="absolute inset-0 bg-cover bg-center z-0 transform-gpu will-change-transform" 
             style={{ 
               backgroundImage: "url('https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=2070&auto=format&fit=crop')",
               ...calculateParallax(0.5, -20)
