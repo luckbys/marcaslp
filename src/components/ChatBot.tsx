@@ -11,10 +11,51 @@ interface Message {
   seriesId?: string; // ID da série de mensagens relacionadas
 }
 
+interface UserInfo {
+  name: string;
+  email: string;
+}
+
 interface QuickAction {
   id: string;
   text: string;
   action: () => void;
+}
+
+// Interfaces para a Evolution API
+interface EvolutionApiPart {
+  type: 'text';
+  text: string;
+}
+
+interface EvolutionApiMessage {
+  role: 'user' | 'agent';
+  parts: EvolutionApiPart[];
+}
+
+interface EvolutionApiStatus {
+  state: string;
+  message: EvolutionApiMessage;
+  timestamp: string;
+}
+
+interface EvolutionApiArtifact {
+  parts: EvolutionApiPart[];
+  index: number;
+}
+
+interface EvolutionApiResult {
+  id: string;
+  sessionId: string;
+  status: EvolutionApiStatus;
+  artifacts: EvolutionApiArtifact[];
+  history: EvolutionApiMessage[];
+}
+
+interface EvolutionApiResponse {
+  jsonrpc: string;
+  id: string;
+  result: EvolutionApiResult;
 }
 
 interface ChatBotProps {
@@ -32,7 +73,7 @@ const CARD_CHAR_LIMIT = 200;
 const ChatBot: React.FC<ChatBotProps> = ({ 
   webhookUrl, 
   botName = "Legado Assistente", 
-  initialMessage = "Olá! Sou o assistente virtual da Legado Marcas. Como posso ajudar você com o registro da sua marca hoje?",
+  initialMessage = "Olá! Para iniciarmos nosso atendimento, poderia me informar seu nome e email?",
   primaryColor = "#1E40AF", // Azul escuro por padrão (bg-blue-800)
   botAvatar = "",
   userAvatar = ""
@@ -47,6 +88,8 @@ const ChatBot: React.FC<ChatBotProps> = ({
   const [showScrollButton, setShowScrollButton] = useState<boolean>(false);
   const [isScrolledToBottom, setIsScrolledToBottom] = useState<boolean>(true);
   const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [showUserForm, setShowUserForm] = useState<boolean>(true);
   
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -301,7 +344,6 @@ const ChatBot: React.FC<ChatBotProps> = ({
       return;
     }
     
-    // Se for a primeira interação, ocultar o conjunto de ações rápidas
     if (isFirstInteraction) {
       setIsFirstInteraction(false);
     }
@@ -319,7 +361,6 @@ const ChatBot: React.FC<ChatBotProps> = ({
     setIsLoading(true);
     
     try {
-      // Enviar a mensagem para o webhook do n8n
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
@@ -327,90 +368,179 @@ const ChatBot: React.FC<ChatBotProps> = ({
         },
         body: JSON.stringify({
           message: userMessage.text,
-          userId: 'visitor', // Pode ser substituído por um ID de usuário real se disponível
+          userId: userInfo?.email || 'visitor',
+          userName: userInfo?.name || 'Visitante',
+          userEmail: userInfo?.email,
           timestamp: userMessage.timestamp
         }),
       });
       
       if (!response.ok) {
-        throw new Error('Falha na comunicação com o servidor');
+        throw new Error(`Erro na requisição: ${response.status}`);
+      }
+
+      // Primeiro obtemos o texto da resposta
+      const rawResponseText = await response.text();
+      
+      // Verificamos se há conteúdo antes de tentar fazer o parse
+      if (!rawResponseText.trim()) {
+        throw new Error('Resposta vazia do servidor');
+      }
+
+      // Tentamos fazer o parse do JSON
+      let data;
+      try {
+        data = JSON.parse(rawResponseText);
+      } catch (e) {
+        console.error('Erro ao fazer parse da resposta:', rawResponseText);
+        throw new Error('Resposta inválida do servidor');
       }
       
-      const data = await response.json();
+      // Processar a resposta do servidor no formato da Evolution API
+      let botResponse = "";
       
-      // Debug para ver o formato exato da resposta
-      console.log('Resposta recebida do webhook:', JSON.stringify(data));
-      
-      // Processar a resposta do servidor que pode vir em diferentes formatos
-      let responseText = "";
-      
-      // Formato 1: { output: "texto" }
-      if (data && data.output) {
-        responseText = data.output;
-      }
-      // Formato 2: { response: "texto" }
-      else if (data && data.response) {
-        responseText = data.response;
-      } 
-      // Formato 3: [{ resposta: "texto" }]
-      else if (Array.isArray(data) && data.length > 0 && data[0].resposta) {
-        responseText = data[0].resposta;
-      } 
-      // Formato 4: { resposta: "texto" } (sem array)
-      else if (data && data.resposta) {
-        responseText = data.resposta;
-      }
-      // Outros formatos desconhecidos
-      else {
-        console.warn('Formato de resposta desconhecido:', data);
-        responseText = "Desculpe, houve um erro ao processar sua mensagem. Por favor, tente novamente.";
-      }
-      
-      // Tratar markdown básico
-      responseText = responseText
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Negrito
-        .replace(/\*(.*?)\*/g, '<em>$1</em>') // Itálico
-        .replace(/\n\s*\n/g, '</p><p>') // Parágrafos
-        .replace(/\n/g, '<br>'); // Quebras de linha simples
-      
-      console.log('Texto extraído para exibição:', responseText);
-      
-      // Dividir resposta longa em múltiplos cards
-      const messageParts = splitLongMessage(responseText);
-      const seriesId = Date.now().toString();
-      
-      const botResponses: Message[] = messageParts.map((part, index) => ({
-        id: `${seriesId}-${index}`,
-        text: part,
-        sender: 'bot',
-        timestamp: new Date(Date.now() + index * 100), // Pequena diferença para ordenação
-        isRead: isOpen, // Só marcamos como lida se o chat estiver aberto
-        isPartOfSeries: messageParts.length > 1,
-        seriesId: messageParts.length > 1 ? seriesId : undefined
-      }));
-      
-      // Adicionar as respostas ao estado
-      setMessages(prev => [...prev, ...botResponses]);
-      
-      // Tocar som de notificação se o chat não estiver aberto (apenas uma vez)
-      if (!isOpen) {
-        playNotificationSound();
+      try {
+        // Verificar se a resposta está no formato esperado
+        if (data?.jsonrpc === "2.0" && data?.result) {
+          console.log('Processando resposta da Evolution API'); // Debug
+          
+          // Tentar pegar a mensagem do status primeiro (mais recente)
+          if (data.result.status?.message?.parts?.[0]?.text) {
+            botResponse = data.result.status.message.parts[0].text;
+          }
+          // Se não encontrar no status, procurar no histórico
+          else if (data.result.history && Array.isArray(data.result.history)) {
+            const agentMessages = data.result.history.filter((msg: EvolutionApiMessage) => msg.role === 'agent');
+            if (agentMessages.length > 0) {
+              const lastAgentMessage = agentMessages[agentMessages.length - 1];
+              if (lastAgentMessage.parts?.[0]?.text) {
+                botResponse = lastAgentMessage.parts[0].text;
+              }
+            }
+          }
+          // Se ainda não encontrou, tentar nos artefatos
+          else if (data.result.artifacts && Array.isArray(data.result.artifacts)) {
+            const lastArtifact = data.result.artifacts[data.result.artifacts.length - 1];
+            if (lastArtifact.parts?.[0]?.text) {
+              botResponse = lastArtifact.parts[0].text;
+            }
+          }
+        }
+
+        // Se não encontrou resposta no formato esperado, tentar formatos alternativos
+        if (!botResponse) {
+          console.log('Tentando formatos alternativos...'); // Debug
+          
+          // Tentar extrair a resposta de diferentes formatos
+          const possibleResponses = [
+            // Formato Evolution API aninhado
+            data?.result?.status?.message?.parts?.[0]?.text,
+            data?.result?.artifacts?.[0]?.parts?.[0]?.text,
+            // Outros formatos possíveis
+            data?.response,
+            data?.message,
+            data?.answer,
+            data?.content,
+            // Busca recursiva por texto em objetos
+            typeof data === 'object' && data !== null ? 
+              Object.values(data).find(value => 
+                typeof value === 'string' && value.length > 20
+              ) : null
+          ].filter(Boolean); // Remover valores nulos/undefined
+
+          // Usar a resposta mais longa encontrada (provavelmente a mais relevante)
+          botResponse = possibleResponses.reduce((longest, current) => 
+            (current && current.length > longest.length) ? current : longest, '');
+        }
+
+        // Garantir que temos uma resposta válida e significativa
+        if (!botResponse || typeof botResponse !== 'string' || botResponse.length < 5) {
+          console.error('Resposta inválida ou muito curta:', botResponse);
+          throw new Error('Não foi possível extrair uma resposta válida dos dados recebidos');
+        }
+
+        console.log('Resposta final antes da formatação:', botResponse); // Debug
+        
+        // Tratar markdown básico e formatação
+        botResponse = botResponse
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Negrito
+          .replace(/\*(.*?)\*/g, '<em>$1</em>') // Itálico
+          .replace(/\n\s*\n/g, '</p><p>') // Parágrafos
+          .replace(/•\s+([^\n]+)/g, '<li>$1</li>') // Bullets
+          .replace(/(\d+)\.\s+([^\n]+)/g, '<li>$1. $2</li>') // Listas numeradas
+          .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>') // Links
+          .replace(/\n/g, '<br>'); // Quebras de linha simples
+
+        // Adicionar tags de lista onde necessário
+        if (botResponse.includes('<li>')) {
+          botResponse = botResponse.replace(/((?:<li>.*?<\/li>)+)/g, '<ul class="list-disc pl-4 space-y-2">$1</ul>');
+        }
+        
+        // Garantir que o texto está envolto em parágrafos
+        if (!botResponse.startsWith('<p>')) {
+          botResponse = '<p>' + botResponse;
+        }
+        if (!botResponse.endsWith('</p>')) {
+          botResponse = botResponse + '</p>';
+        }
+
+        console.log('Resposta final formatada:', botResponse); // Debug
+        
+        // Dividir resposta longa em múltiplos cards
+        const messageParts = splitLongMessage(botResponse);
+        const seriesId = Date.now().toString();
+        
+        const botResponses: Message[] = messageParts.map((part, index) => ({
+          id: `${seriesId}-${index}`,
+          text: part,
+          sender: 'bot',
+          timestamp: new Date(Date.now() + index * 100),
+          isRead: isOpen,
+          isPartOfSeries: messageParts.length > 1,
+          seriesId: messageParts.length > 1 ? seriesId : undefined
+        }));
+        
+        // Evitar duplicação de mensagens
+        setMessages(prev => {
+          const uniqueResponses = botResponses.filter(newMsg => 
+            !prev.some(existingMsg => 
+              existingMsg.text === newMsg.text && 
+              existingMsg.timestamp.getTime() === newMsg.timestamp.getTime()
+            )
+          );
+          return [...prev, ...uniqueResponses];
+        });
+        
+        if (!isOpen) {
+          playNotificationSound();
+        }
+      } catch (error) {
+        console.error('Erro ao processar resposta:', error);
+        
+        const errorMessage: Message = {
+          id: Date.now().toString(),
+          text: error instanceof Error ? error.message : "Ocorreu um erro na comunicação. Por favor, tente novamente.",
+          sender: 'bot',
+          timestamp: new Date(),
+          isRead: isOpen
+        };
+        
+        setMessages(prev => [...prev, errorMessage]);
+      } finally {
+        setIsLoading(false);
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
       
-      // Feedback de erro para o usuário
       const errorMessage: Message = {
         id: Date.now().toString(),
-        text: "Ocorreu um erro na comunicação. Por favor, tente novamente mais tarde ou entre em contato por telefone.",
+        text: error instanceof Error ? error.message : "Ocorreu um erro na comunicação. Por favor, tente novamente mais tarde.",
         sender: 'bot',
         timestamp: new Date(),
         isRead: isOpen
       };
       
       setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -488,7 +618,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
-      {/* Botão para abrir/fechar o chat - Maior em mobile */}
+      {/* Botão para abrir/fechar o chat */}
       <button
         onClick={toggleChat}
         className="relative bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-105 w-16 h-16 md:w-12 md:h-12"
@@ -497,7 +627,6 @@ const ChatBot: React.FC<ChatBotProps> = ({
       >
         {isOpen ? <X size={isMobile ? 32 : 24} /> : <MessageSquare size={isMobile ? 32 : 24} />}
         
-        {/* Badge de notificação - Maior em mobile */}
         {!isOpen && unreadMessages > 0 && (
           <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-7 h-7 md:w-5 md:h-5 flex items-center justify-center animate-pulse">
             {unreadMessages > 9 ? '9+' : unreadMessages}
@@ -505,7 +634,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
         )}
       </button>
 
-      {/* Janela do chat - Tela cheia em mobile */}
+      {/* Janela do chat */}
       {isOpen && (
         <div 
           className={`fixed md:absolute ${isMobile ? 'inset-0' : 'bottom-16 right-0'} w-full md:w-96 bg-white md:rounded-lg shadow-xl flex flex-col overflow-hidden border border-gray-200 animate-fadeIn z-50`}
@@ -515,7 +644,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
             maxHeight: isMobile ? '100vh' : '600px'
           }}
         >
-          {/* Cabeçalho do chat - Maior em mobile */}
+          {/* Cabeçalho do chat */}
           <div 
             className="p-4 flex justify-between items-center text-white"
             style={{ backgroundColor: primaryColor }}
@@ -543,7 +672,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
             </div>
           </div>
 
-          {/* Container de mensagens - Ajustado para mobile */}
+          {/* Container de mensagens */}
           <div
             className="flex-1 p-4 overflow-y-auto bg-gray-50"
             style={{ 
@@ -558,7 +687,71 @@ const ChatBot: React.FC<ChatBotProps> = ({
                 {error}
               </div>
             )}
+
+            {/* Formulário inicial do usuário */}
+            {showUserForm && !userInfo && (
+              <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 mb-4">
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  const name = formData.get('name') as string;
+                  const email = formData.get('email') as string;
+                  
+                  if (name && email) {
+                    setUserInfo({ name, email });
+                    setShowUserForm(false);
+                    // Adicionar mensagem de boas-vindas personalizada
+                    setMessages([
+                      {
+                        id: Date.now().toString(),
+                        text: `Olá ${name}! Como posso ajudar você com o registro da sua marca hoje?`,
+                        sender: 'bot',
+                        timestamp: new Date(),
+                        isRead: true
+                      }
+                    ]);
+                  }
+                }}>
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                        Nome
+                      </label>
+                      <input
+                        type="text"
+                        name="name"
+                        id="name"
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        placeholder="Digite seu nome"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        name="email"
+                        id="email"
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        placeholder="Digite seu email"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="w-full px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm transition-colors"
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      Iniciar Conversa
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
             
+            {/* Mensagens do chat */}
             {messages.map((msg, index) => {
               const showAvatarAndTime = shouldShowAvatarAndTime(msg, index);
               const isSeriesContinuation = msg.isPartOfSeries && index > 0 && 
@@ -674,15 +867,20 @@ const ChatBot: React.FC<ChatBotProps> = ({
         </button>
       )}
 
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn {
-          from { opacity: 0; transform: ${isMobile ? 'translateY(100%)' : 'translateY(10px)'} }
-          to { opacity: 1; transform: translateY(0) }
+          from {
+            opacity: 0;
+            transform: ${isMobile ? 'translateY(100%)' : 'translateY(10px)'};
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
         
         ${messageSlideAnimation}
         
-        /* Estilos para mensagens */
         .text-base p, .text-sm p {
           margin-bottom: ${isMobile ? '1rem' : '0.75rem'};
           line-height: 1.5;
@@ -692,7 +890,6 @@ const ChatBot: React.FC<ChatBotProps> = ({
           margin-bottom: 0;
         }
         
-        /* Estilos para listas */
         .text-base ul, .text-sm ul {
           margin: 0.75rem 0;
           padding-left: 1.5rem;
@@ -703,7 +900,21 @@ const ChatBot: React.FC<ChatBotProps> = ({
           position: relative;
         }
 
-        /* Ajustes para mobile */
+        .form-container {
+          animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
         @media (max-width: 768px) {
           .message-bubble {
             font-size: 1rem;
@@ -718,6 +929,15 @@ const ChatBot: React.FC<ChatBotProps> = ({
           .quick-actions button {
             padding: 12px 16px;
             font-size: 1rem;
+          }
+
+          .form-container {
+            padding: 16px;
+          }
+
+          .form-container input {
+            font-size: 16px;
+            padding: 12px;
           }
         }
       `}</style>
