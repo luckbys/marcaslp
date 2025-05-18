@@ -463,14 +463,14 @@ const ChatBot: React.FC<ChatBotProps> = ({
         
         // Tratar markdown básico e formatação
         botResponse = botResponse
-          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Negrito
-          .replace(/\*(.*?)\*/g, '<em>$1</em>') // Itálico
-          .replace(/\n\s*\n/g, '</p><p>') // Parágrafos
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Negrito
+        .replace(/\*(.*?)\*/g, '<em>$1</em>') // Itálico
+        .replace(/\n\s*\n/g, '</p><p>') // Parágrafos
           .replace(/•\s+([^\n]+)/g, '<li>$1</li>') // Bullets
           .replace(/(\d+)\.\s+([^\n]+)/g, '<li>$1. $2</li>') // Listas numeradas
           .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>') // Links
-          .replace(/\n/g, '<br>'); // Quebras de linha simples
-
+        .replace(/\n/g, '<br>'); // Quebras de linha simples
+      
         // Adicionar tags de lista onde necessário
         if (botResponse.includes('<li>')) {
           botResponse = botResponse.replace(/((?:<li>.*?<\/li>)+)/g, '<ul class="list-disc pl-4 space-y-2">$1</ul>');
@@ -485,21 +485,21 @@ const ChatBot: React.FC<ChatBotProps> = ({
         }
 
         console.log('Resposta final formatada:', botResponse); // Debug
-        
-        // Dividir resposta longa em múltiplos cards
+      
+      // Dividir resposta longa em múltiplos cards
         const messageParts = splitLongMessage(botResponse);
-        const seriesId = Date.now().toString();
-        
-        const botResponses: Message[] = messageParts.map((part, index) => ({
-          id: `${seriesId}-${index}`,
-          text: part,
-          sender: 'bot',
+      const seriesId = Date.now().toString();
+      
+      const botResponses: Message[] = messageParts.map((part, index) => ({
+        id: `${seriesId}-${index}`,
+        text: part,
+        sender: 'bot',
           timestamp: new Date(Date.now() + index * 100),
           isRead: isOpen,
-          isPartOfSeries: messageParts.length > 1,
-          seriesId: messageParts.length > 1 ? seriesId : undefined
-        }));
-        
+        isPartOfSeries: messageParts.length > 1,
+        seriesId: messageParts.length > 1 ? seriesId : undefined
+      }));
+      
         // Evitar duplicação de mensagens
         setMessages(prev => {
           const uniqueResponses = botResponses.filter(newMsg => 
@@ -511,23 +511,23 @@ const ChatBot: React.FC<ChatBotProps> = ({
           return [...prev, ...uniqueResponses];
         });
         
-        if (!isOpen) {
-          playNotificationSound();
-        }
-      } catch (error) {
+      if (!isOpen) {
+        playNotificationSound();
+      }
+    } catch (error) {
         console.error('Erro ao processar resposta:', error);
-        
-        const errorMessage: Message = {
-          id: Date.now().toString(),
+      
+      const errorMessage: Message = {
+        id: Date.now().toString(),
           text: error instanceof Error ? error.message : "Ocorreu um erro na comunicação. Por favor, tente novamente.",
-          sender: 'bot',
-          timestamp: new Date(),
-          isRead: isOpen
-        };
-        
-        setMessages(prev => [...prev, errorMessage]);
-      } finally {
-        setIsLoading(false);
+        sender: 'bot',
+        timestamp: new Date(),
+        isRead: isOpen
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
@@ -673,7 +673,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
           </div>
 
           {/* Container de mensagens */}
-          <div
+          <div 
             className="flex-1 p-4 overflow-y-auto bg-gray-50"
             style={{ 
               height: isMobile ? 'calc(100vh - 180px)' : 'auto',
@@ -687,7 +687,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
                 {error}
               </div>
             )}
-
+            
             {/* Formulário inicial do usuário */}
             {showUserForm && !userInfo && (
               <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 mb-4">
@@ -788,7 +788,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
                 </div>
               );
             })}
-
+            
             {/* Indicador de digitação */}
             {isLoading && (
               <div className="flex justify-start mb-3 items-start">
@@ -846,7 +846,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
               </button>
             </div>
           </div>
-
+          
           {/* Rodapé */}
           <div className="px-4 py-3 md:py-2 bg-gray-50 border-t border-gray-200">
             <p className="text-sm text-gray-400 text-center">
@@ -855,7 +855,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
           </div>
         </div>
       )}
-
+      
       {/* Botão de rolagem para baixo - Ajustado para mobile */}
       {showScrollButton && (
         <button
