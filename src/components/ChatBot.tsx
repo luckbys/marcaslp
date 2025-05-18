@@ -491,15 +491,15 @@ const ChatBot: React.FC<ChatBotProps> = ({
       {/* Botão para abrir/fechar o chat - Maior em mobile */}
       <button
         onClick={toggleChat}
-        className="relative bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 md:p-3 shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-105 w-14 h-14 md:w-12 md:h-12"
+        className="relative bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-105 w-16 h-16 md:w-12 md:h-12"
         style={{ backgroundColor: primaryColor }}
         aria-label={isOpen ? "Fechar chat" : "Abrir chat"}
       >
-        {isOpen ? <X size={28} /> : <MessageSquare size={28} />}
+        {isOpen ? <X size={isMobile ? 32 : 24} /> : <MessageSquare size={isMobile ? 32 : 24} />}
         
         {/* Badge de notificação - Maior em mobile */}
         {!isOpen && unreadMessages > 0 && (
-          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 md:w-5 md:h-5 flex items-center justify-center animate-pulse">
+          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-7 h-7 md:w-5 md:h-5 flex items-center justify-center animate-pulse">
             {unreadMessages > 9 ? '9+' : unreadMessages}
           </span>
         )}
@@ -508,49 +508,53 @@ const ChatBot: React.FC<ChatBotProps> = ({
       {/* Janela do chat - Tela cheia em mobile */}
       {isOpen && (
         <div 
-          className="fixed md:absolute inset-0 md:inset-auto md:bottom-16 md:right-0 w-full md:w-96 bg-white md:rounded-lg shadow-xl flex flex-col overflow-hidden border border-gray-200 animate-fadeIn z-50"
-          style={{ animation: 'fadeIn 0.3s ease-out', height: isMobile ? '100vh' : 'auto', maxHeight: isMobile ? '100vh' : '600px' }}
+          className={`fixed md:absolute ${isMobile ? 'inset-0' : 'bottom-16 right-0'} w-full md:w-96 bg-white md:rounded-lg shadow-xl flex flex-col overflow-hidden border border-gray-200 animate-fadeIn z-50`}
+          style={{ 
+            animation: 'fadeIn 0.3s ease-out',
+            height: isMobile ? '100vh' : 'auto',
+            maxHeight: isMobile ? '100vh' : '600px'
+          }}
         >
           {/* Cabeçalho do chat - Maior em mobile */}
           <div 
-            className="p-4 md:p-3 flex justify-between items-center text-white"
+            className="p-4 flex justify-between items-center text-white"
             style={{ backgroundColor: primaryColor }}
           >
             <div className="flex items-center">
               <BotAvatar />
-              <h3 className="font-medium text-lg md:text-base">{botName}</h3>
+              <h3 className="font-medium text-xl md:text-base">{botName}</h3>
             </div>
-            <div className="flex items-center space-x-4 md:space-x-2">
+            <div className="flex items-center space-x-4">
               <button 
                 onClick={clearConversation} 
-                className="text-white hover:text-gray-200 transition-colors p-2 md:p-1"
+                className="text-white hover:text-gray-200 transition-colors p-2"
                 aria-label="Limpar conversa"
                 title="Limpar conversa"
               >
-                <Trash2 size={isMobile ? 20 : 16} />
+                <Trash2 size={isMobile ? 24 : 16} />
               </button>
               <button 
                 onClick={toggleChat} 
-                className="text-white hover:text-gray-200 transition-colors p-2 md:p-1"
+                className="text-white hover:text-gray-200 transition-colors p-2"
                 aria-label="Fechar chat"
               >
-                <X size={isMobile ? 24 : 20} />
+                <X size={isMobile ? 28 : 20} />
               </button>
             </div>
           </div>
 
-          {/* Mensagens - Ajuste de altura para mobile */}
-          <div 
+          {/* Container de mensagens - Ajustado para mobile */}
+          <div
             className="flex-1 p-4 overflow-y-auto bg-gray-50"
             style={{ 
-              height: isMobile ? 'calc(100vh - 140px)' : 'auto',
-              maxHeight: isMobile ? 'calc(100vh - 140px)' : '400px'
+              height: isMobile ? 'calc(100vh - 180px)' : 'auto',
+              maxHeight: isMobile ? 'calc(100vh - 180px)' : '400px'
             }}
             onScroll={handleScroll}
             ref={chatContainerRef}
           >
             {error && (
-              <div className="bg-red-100 text-red-800 p-3 rounded-lg mb-3 text-sm">
+              <div className="bg-red-100 text-red-800 p-3 rounded-lg mb-3 text-base md:text-sm">
                 {error}
               </div>
             )}
@@ -560,22 +564,10 @@ const ChatBot: React.FC<ChatBotProps> = ({
               const isSeriesContinuation = msg.isPartOfSeries && index > 0 && 
                 messages[index - 1].seriesId === msg.seriesId;
               
-              // Ajustar o layout das mensagens para melhor espaçamento e legibilidade
-              const messageSpacing = isSeriesContinuation ? "mb-2" : "mb-4";
-              
-              // Estilo de borda para mensagens em série
-              const borderStyle = isSeriesContinuation
-                ? msg.sender === 'user' 
-                  ? 'rounded-tr-sm' 
-                  : 'rounded-tl-sm'
-                : msg.sender === 'user'
-                  ? 'rounded-tr-none'
-                  : 'rounded-tl-none';
-              
               return (
                 <div
                   key={msg.id}
-                  className={`${messageSpacing} flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} animate-messageSlide`}
+                  className={`mb-4 flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} animate-messageSlide`}
                   style={{ 
                     animationDelay: `${index * 0.1}s`,
                     opacity: 0,
@@ -583,86 +575,53 @@ const ChatBot: React.FC<ChatBotProps> = ({
                   }}
                 >
                   {msg.sender === 'bot' && (!isSeriesContinuation || showAvatarAndTime) && <BotAvatar />}
-                  {msg.sender === 'bot' && isSeriesContinuation && !showAvatarAndTime && <div className="w-8 mr-2" />} {/* Espaçador */}
+                  {msg.sender === 'bot' && isSeriesContinuation && !showAvatarAndTime && <div className="w-8 mr-2" />}
                   
                   <div
-                    className={`max-w-[75%] rounded-lg px-4 py-2 shadow-sm ${
+                    className={`max-w-[85%] md:max-w-[75%] rounded-lg px-4 py-3 shadow-sm ${
                       msg.sender === 'user'
-                        ? 'bg-blue-500 text-white ' + borderStyle
-                        : 'bg-white text-gray-800 border border-gray-200 ' + borderStyle
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-white text-gray-800 border border-gray-200'
                     }`}
                   >
-                    <div dangerouslySetInnerHTML={{ __html: formatMessage(msg.text) }} className="text-sm whitespace-pre-wrap break-words" />
-                    
-                    {showAvatarAndTime && (
-                      <div className="flex justify-between items-center mt-1">
-                        <span className="text-xs opacity-75">
-                          {formatTime(msg.timestamp)}
-                        </span>
-                        
-                        {/* Feedback de mensagem para o bot - só na última mensagem */}
-                        {msg.sender === 'bot' && index === messages.length - 1 && !isLoading && (
-                          <div className="flex space-x-1 ml-2">
-                            <button 
-                              className="text-xs opacity-70 hover:opacity-100 transition-opacity"
-                              title="Resposta útil"
-                            >
-                              <ThumbsUp size={12} />
-                            </button>
-                            <button 
-                              className="text-xs opacity-70 hover:opacity-100 transition-opacity"
-                              title="Resposta não útil"
-                            >
-                              <ThumbsDown size={12} />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    <div 
+                      dangerouslySetInnerHTML={{ __html: formatMessage(msg.text) }} 
+                      className="text-base md:text-sm whitespace-pre-wrap break-words leading-relaxed"
+                    />
                   </div>
                   
                   {msg.sender === 'user' && (!isSeriesContinuation || showAvatarAndTime) && <UserAvatar />}
-                  {msg.sender === 'user' && isSeriesContinuation && !showAvatarAndTime && <div className="w-8 ml-2" />} {/* Espaçador */}
+                  {msg.sender === 'user' && isSeriesContinuation && !showAvatarAndTime && <div className="w-8 ml-2" />}
                 </div>
               );
             })}
-            
+
+            {/* Indicador de digitação */}
             {isLoading && (
               <div className="flex justify-start mb-3 items-start">
                 <BotAvatar />
-                <div className="bg-white text-gray-800 rounded-lg px-4 py-3 border border-gray-200 rounded-tl-none shadow-sm">
-                  <div className="flex space-x-1 items-center">
-                    <div className="text-xs text-gray-500 mr-1">Digitando</div>
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                <div className="bg-white text-gray-800 rounded-lg px-4 py-3 border border-gray-200 shadow-sm">
+                  <div className="flex space-x-2 items-center">
+                    <div className="text-sm text-gray-500 mr-2">Digitando</div>
+                    <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce"></div>
+                    <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                   </div>
                 </div>
               </div>
             )}
-            
-            {/* Botão de rolagem para baixo */}
-            {showScrollButton && (
-              <button
-                onClick={scrollToBottom}
-                className="fixed bottom-24 right-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-2 shadow-lg transition-all duration-300 hover:scale-110 z-50"
-                aria-label="Rolar para baixo"
-              >
-                <ArrowDown className="w-5 h-5" />
-              </button>
-            )}
           </div>
 
-          {/* Botões de ação rápida - Layout melhorado para mobile */}
-          {isFirstInteraction && messages.length < 2 && (
-            <div className="px-4 py-3 md:py-2 bg-gray-50 border-t border-gray-200">
-              <p className="text-sm md:text-xs text-gray-500 mb-3 md:mb-2">Perguntas frequentes:</p>
-              <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2">
+          {/* Botões de ação rápida - Layout grid em mobile */}
+          {isFirstInteraction && (
+            <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
+              <p className="text-base md:text-sm text-gray-500 mb-3">Perguntas frequentes:</p>
+              <div className="grid grid-cols-2 gap-3">
                 {quickActions.map(action => (
                   <button
                     key={action.id}
                     onClick={action.action}
-                    className="bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm md:text-xs px-4 py-2 md:px-3 md:py-1 rounded-full transition-colors w-full md:w-auto text-center"
+                    className="bg-gray-200 hover:bg-gray-300 text-gray-800 text-base md:text-sm px-4 py-3 md:py-2 rounded-xl transition-colors w-full text-center"
                   >
                     {action.text}
                   </button>
@@ -671,41 +630,51 @@ const ChatBot: React.FC<ChatBotProps> = ({
             </div>
           )}
 
-          {/* Formulário de entrada - Maior em mobile */}
-          <div className="p-4 md:p-3 border-t border-gray-200 bg-white">
-            <div className="flex items-center">
+          {/* Área de input - Otimizada para mobile */}
+          <div className="p-4 bg-white border-t border-gray-200">
+            <div className="flex items-center gap-2">
               <input
                 ref={inputRef}
                 type="text"
                 placeholder="Digite sua mensagem..."
-                className="flex-1 p-3 md:p-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base md:text-sm"
+                className="flex-1 px-4 py-3 md:py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
                 disabled={isLoading}
               />
               <button
-                className="text-white px-4 md:px-3 rounded-r-lg flex items-center justify-center disabled:opacity-50 transition-all h-12 md:h-10"
+                className="text-white p-3 rounded-xl flex items-center justify-center disabled:opacity-50 transition-all h-12 w-12 md:h-10 md:w-10"
                 style={{ backgroundColor: isLoading || !inputValue.trim() ? '#9CA3AF' : primaryColor }}
                 onClick={() => sendMessage()}
                 disabled={isLoading || !inputValue.trim()}
               >
-                <Send size={isMobile ? 22 : 18} />
+                <Send size={isMobile ? 24 : 18} />
               </button>
             </div>
           </div>
-          
-          {/* Rodapé - Ajustado para mobile */}
-          <div className="px-4 py-2 md:px-3 md:py-1 bg-gray-50 border-t border-gray-200">
-            <p className="text-sm md:text-xs text-gray-400 text-center">
+
+          {/* Rodapé */}
+          <div className="px-4 py-3 md:py-2 bg-gray-50 border-t border-gray-200">
+            <p className="text-sm text-gray-400 text-center">
               Powered by Legado Marcas e Patentes
             </p>
           </div>
         </div>
       )}
-      
-      {/* Estilos atualizados para mobile */}
-      <style>{`
+
+      {/* Botão de rolagem para baixo - Ajustado para mobile */}
+      {showScrollButton && (
+        <button
+          onClick={scrollToBottom}
+          className="fixed bottom-28 right-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-3 shadow-lg transition-all duration-300 hover:scale-110 z-50"
+          aria-label="Rolar para baixo"
+        >
+          <ArrowDown size={isMobile ? 24 : 20} />
+        </button>
+      )}
+
+      <style jsx>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: ${isMobile ? 'translateY(100%)' : 'translateY(10px)'} }
           to { opacity: 1; transform: translateY(0) }
@@ -713,80 +682,42 @@ const ChatBot: React.FC<ChatBotProps> = ({
         
         ${messageSlideAnimation}
         
-        /* Melhorias para formatação de texto em mobile */
-        .text-sm p {
+        /* Estilos para mensagens */
+        .text-base p, .text-sm p {
           margin-bottom: ${isMobile ? '1rem' : '0.75rem'};
-          font-size: ${isMobile ? '1rem' : '0.875rem'};
+          line-height: 1.5;
         }
         
-        /* Melhorias para formatação de texto */
-        .text-sm p {
-          margin-bottom: 0.75rem;
-        }
-        
-        .text-sm p:last-child {
+        .text-base p:last-child, .text-sm p:last-child {
           margin-bottom: 0;
         }
         
-        .text-sm ul {
-          margin: 0.5rem 0;
-          padding-left: 1.25rem;
+        /* Estilos para listas */
+        .text-base ul, .text-sm ul {
+          margin: 0.75rem 0;
+          padding-left: 1.5rem;
         }
         
-        .text-sm li {
-          margin-bottom: 0.375rem;
+        .text-base li, .text-sm li {
+          margin-bottom: 0.5rem;
           position: relative;
         }
 
-        .text-sm li.list-disc::before {
-          content: "•";
-          position: absolute;
-          left: -1rem;
-          color: currentColor;
-        }
-
-        .text-sm li.list-decimal {
-          list-style-type: decimal;
-          margin-left: 0.5rem;
-        }
-
-        .text-sm strong {
-          font-weight: 600;
-        }
-
-        .text-sm em {
-          font-style: italic;
-        }
-
-        /* Ajustes para mensagens do bot */
-        .bg-white .text-sm ul {
-          color: #374151;
-        }
-
-        /* Ajustes para mensagens do usuário */
-        .bg-blue-500 .text-sm ul {
-          color: white;
-        }
-
-        /* Estilo para o botão de rolagem */
-        .scroll-button {
-          animation: fadeIn 0.3s ease-out;
-        }
-
-        /* Ajustes específicos para mobile */
+        /* Ajustes para mobile */
         @media (max-width: 768px) {
-          .scroll-button {
-            bottom: 100px;
-            right: 20px;
-            padding: 12px;
-          }
-
           .message-bubble {
-            max-width: 85%;
+            font-size: 1rem;
+            line-height: 1.5;
+            padding: 12px 16px;
           }
 
-          .typing-indicator {
+          .input-area {
+            padding: 16px;
+          }
+
+          .quick-actions button {
             padding: 12px 16px;
+            font-size: 1rem;
           }
         }
       `}</style>
