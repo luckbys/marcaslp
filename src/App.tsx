@@ -5,6 +5,7 @@ import PartnersCarousel from './components/PartnersCarousel';
 import VideoTestimonialSection from './components/VideoTestimonialSection';
 import Diferenciais from './components/Diferenciais';
 import ContactForm from './components/ContactForm';
+import HeroBackgroundCarousel from './components/HeroBackgroundCarousel';
 
 function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -365,73 +366,79 @@ function App() {
       <main className="pt-16 md:pt-0">
         <section
           id="home"
-          className="hero-minimalista relative overflow-hidden min-h-[80vh] md:min-h-screen"
+          className="hero-minimalista relative overflow-hidden min-h-[90vh] md:min-h-screen"
           aria-label="Seção principal"
           role="banner"
         >
-          {/* Background com parallax profundo */}
-          <div 
-            className="absolute inset-0 bg-cover bg-center z-0 transform-gpu" 
-            style={{ 
-              backgroundImage: "url('https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=2070&auto=format&fit=crop')",
-              ...calculateParallax(0.5, -20)
-            }}
-          ></div>
-          
-          {/* Camada de profundidade adicional */}
-          <div 
-            className="absolute inset-0 bg-gradient-to-b from-blue-900/30 to-transparent z-1 transform-gpu"
-            style={calculate3DRotation(0.3, -10)}
-          ></div>
-          
-          {/* Overlay principal com efeito parallax */}
-          <div 
-            className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/20 z-2 transform-gpu"
-            style={calculate3DRotation(0.2, 0)}
-          ></div>
-          
-          {/* Marca d'água com efeito parallax intenso */}
-          <div 
-            className="hero-watermark right-1/4 top-1/2 transform -translate-y-1/2 transform-gpu" 
-            style={calculateParallax(2, 50)}
-            aria-hidden="true"
-          >
-            ®
-          </div>
+          {/* Background com carrossel e overlay */}
+          <HeroBackgroundCarousel calculateParallax={calculateParallax} />
           
           {/* Conteúdo com efeito parallax suave */}
           <div 
-            className="container mx-auto px-4 md:px-6 relative z-10 py-20 md:py-32 transform-gpu"
+            className="container mx-auto px-4 md:px-6 relative z-10 h-full flex items-center transform-gpu"
             style={calculateParallax(0.3, 30)}
           >
-            <div className="max-w-2xl relative">
+            <div className="max-w-2xl relative animate-fade-in-up">
               {/* Título com profundidade */}
-              <h1 className="hero-title transform-gpu" style={calculateParallax(0.4, 40)}>
-                LEGADO MARCAS E PATENTES <span className="text-blue-500">®</span>
+              <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold mb-8 text-white leading-tight tracking-tight transform-gpu" style={calculateParallax(0.4, 40)}>
+                LEGADO MARCAS E PATENTES <span className="text-yellow-400">®</span>
               </h1>
               
               {/* Texto com profundidade média */}
-              <div className="space-y-4 mb-8 md:mb-10 transform-gpu" style={calculateParallax(0.35, 35)}>
-                <p className="text-xl md:text-2xl text-white font-medium">
+              <div className="space-y-6 mb-12 transform-gpu" style={calculateParallax(0.35, 35)}>
+                <p className="text-xl md:text-2xl text-yellow-100 font-medium leading-relaxed">
                   Nós garantimos o seu registro! Com o nosso serviço, sua marca estará segura.
                 </p>
-                <p className="text-base md:text-lg text-gray-200">
-                  Em caso de indeferimento de marca, lhe daremos outra assessoria para depósito de uma nova marca totalmente gratuita!
-                </p>
+                
+                <ul className="text-gray-100 space-y-4 pl-6">
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-6 h-6 text-yellow-400 flex-shrink-0 mt-1" />
+                    <span>Proteção garantida em todo território nacional</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-6 h-6 text-yellow-400 flex-shrink-0 mt-1" />
+                    <span>Nova assessoria gratuita em caso de indeferimento</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="w-6 h-6 text-yellow-400 flex-shrink-0 mt-1" />
+                    <span>Acompanhamento completo do processo</span>
+                  </li>
+                </ul>
               </div>
               
-              {/* CTA com máxima profundidade */}
-              <a 
-                href="#contato" 
-                onClick={(e) => scrollToSection(e, 'contato')} 
-                className="hero-cta transform-gpu shine-effect"
-                style={calculateParallax(0.45, 60)}
-                role="button"
-                aria-label="Solicitar orçamento agora"
-              >
-                <span>SOLICITAR ORÇAMENTO</span>
-                <ArrowDown className="w-5 h-5" aria-hidden="true" />
-              </a>
+              {/* CTAs */}
+              <div className="flex flex-col sm:flex-row gap-4 transform-gpu" style={calculateParallax(0.45, 60)}>
+                <a 
+                  href="#contato" 
+                  onClick={(e) => scrollToSection(e, 'contato')} 
+                  className="w-full sm:w-auto bg-yellow-400 hover:bg-yellow-300 text-blue-900 font-bold py-4 px-8 rounded-lg inline-flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                  role="button"
+                  aria-label="Registrar minha marca"
+                >
+                  <span>REGISTRAR MINHA MARCA</span>
+                  <ArrowDown className="w-5 h-5" aria-hidden="true" />
+                </a>
+                
+                <a 
+                  href="https://wa.me/551233410600" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto border-2 border-white hover:border-yellow-400 text-white hover:text-yellow-400 font-bold py-4 px-8 rounded-lg inline-flex items-center justify-center gap-2 transition-all duration-300"
+                  role="button"
+                  aria-label="Falar com especialista"
+                >
+                  <span>FALAR COM ESPECIALISTA</span>
+                  <PhoneCall className="w-5 h-5" aria-hidden="true" />
+                </a>
+              </div>
+            </div>
+          </div>
+          
+          {/* Scroll-down cue */}
+          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+            <div className="flex flex-col items-center gap-2 text-white/80">
+              <span className="text-sm font-medium">Descubra mais</span>
+              <ArrowDown className="w-6 h-6" />
             </div>
           </div>
         </section>
