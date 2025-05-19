@@ -5,7 +5,7 @@ import PartnersCarousel from './components/PartnersCarousel';
 import VideoTestimonialSection from './components/VideoTestimonialSection';
 import Diferenciais from './components/Diferenciais';
 import ContactForm from './components/ContactForm';
-import HeroBackgroundCarousel from './components/HeroBackgroundCarousel';
+import HeroBackground from './components/HeroBackgroundCarousel';
 
 function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -371,7 +371,7 @@ function App() {
           role="banner"
         >
           {/* Background com carrossel e overlay */}
-          <HeroBackgroundCarousel calculateParallax={calculateParallax} />
+          <HeroBackground calculateParallax={calculateParallax} />
           
           {/* Conteúdo com efeito parallax suave */}
           <div 
