@@ -60,24 +60,32 @@ interface EvolutionApiResponse {
 
 interface ChatBotProps {
   webhookUrl?: string;
+  botWebhookUrl?: string;
   botName?: string;
   initialMessage?: string;
   primaryColor?: string;
   botAvatar?: string;
   userAvatar?: string;
+  evolutionApiUrl?: string;  // URL da Evolution API
+  evolutionApiKey?: string;  // API Key da Evolution API
+  evolutionApiInstance?: string;  // Instance ID da Evolution API
 }
 
 // Limite de caracteres por card
 const CARD_CHAR_LIMIT = 200;
 
 const ChatBot: React.FC<ChatBotProps> = ({ 
-  webhookUrl, 
-  botName = "Legado Assistente", 
+  webhookUrl = "https://press-n8n.jhkbgs.easypanel.host/webhook-test/notifica",
+  botWebhookUrl = "https://press-n8n.jhkbgs.easypanel.host/webhook/con-chat",
+  botName = "Legado Assistente",
   initialMessage = "Olá! Para iniciarmos nosso atendimento, poderia me informar seu nome e email?",
-  primaryColor = "#1E40AF", // Azul escuro por padrão (bg-blue-800)
+  primaryColor = "#1E40AF",
   botAvatar = "",
-  userAvatar = ""
-}) => {
+  userAvatar = "",
+  evolutionApiUrl = "",
+  evolutionApiKey = "",
+  evolutionApiInstance = ""
+}): JSX.Element => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState<string>('');
@@ -90,6 +98,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [showUserForm, setShowUserForm] = useState<boolean>(true);
+  const [isHumanAttendance, setIsHumanAttendance] = useState<boolean>(false);
   
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -294,13 +303,287 @@ const ChatBot: React.FC<ChatBotProps> = ({
     return messageParts;
   };
 
-  // Função para lidar com ações rápidas
-  const handleQuickAction = (text: string) => {
+  // Função para enviar mensagem via Evolution API
+  const sendEvolutionApiMessage = async (phoneNumber: string, message: string) => {
+    try {
+      console.log('Iniciando envio de mensagem via Evolution API');
+      
+      // Garantir que temos todas as configurações necessárias
+      if (!evolutionApiUrl || !evolutionApiKey || !evolutionApiInstance) {
+        throw new Error('Configurações da Evolution API não encontradas');
+      }
+
+      // Remover barras extras da URL e garantir formato correto
+      const baseUrl = evolutionApiUrl.replace(/\/+$/, '');
+      
+      // Usar a instância fornecida nas props
+      const instanceId = evolutionApiInstance;
+      
+      // Formatar o número do telefone
+      const formattedNumber = phoneNumber.includes('@s.whatsapp.net') ? 
+        phoneNumber : `${phoneNumber}@s.whatsapp.net`;
+      
+      console.log('Número formatado:', formattedNumber);
+      console.log('Usando instância:', instanceId);
+
+      const payload = {
+        number: formattedNumber,
+        options: {
+          delay: 1200,
+          presence: "composing"
+        },
+        textMessage: {
+          text: message
+        }
+      };
+
+      console.log('Payload da requisição:', payload);
+
+      // Construir URL corretamente
+      const url = `${baseUrl}/message/sendText/${instanceId}`;
+      console.log('URL da requisição:', url);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': evolutionApiKey
+        },
+        body: JSON.stringify(payload)
+      });
+
+      console.log('Status da resposta:', response.status);
+      const responseData = await response.json();
+      console.log('Dados da resposta:', responseData);
+
+      if (!response.ok) {
+        throw new Error(`Erro ao enviar mensagem: ${response.status} - ${JSON.stringify(responseData)}`);
+      }
+
+      return responseData;
+    } catch (error) {
+      console.error('Erro detalhado ao enviar mensagem:', error);
+      throw error;
+    }
+  };
+
+  // Função para enviar notificação para o webhook apropriado
+  const sendWebhookNotification = async (type: string, message: string, additionalData = {}) => {
+    try {
+      // Determinar qual webhook usar baseado no modo de atendimento
+      const currentWebhook = isHumanAttendance ? webhookUrl : botWebhookUrl;
+      
+      console.log('Enviando para webhook:', currentWebhook, 'Modo:', isHumanAttendance ? 'Humano' : 'Bot');
+      
+      const response = await fetch(currentWebhook, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type,
+          message,
+          userId: userInfo?.email || 'visitor',
+          userName: userInfo?.name || 'Visitante',
+          userEmail: userInfo?.email,
+          timestamp: new Date(),
+          isHumanAttendance,
+          ...additionalData
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro ao enviar notificação: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Erro ao enviar notificação:', error);
+      throw error;
+    }
+  };
+
+  // Modificar a função handleQuickAction
+  const handleQuickAction = async (text: string) => {
     setInputValue(text);
-    // Opcional: enviar automaticamente após selecionar
-    setTimeout(() => {
-      sendMessage(text);
-    }, 100);
+    
+    if (text === 'Gostaria de falar com um atendente humano.') {
+      try {
+        // Adicionar mensagem do usuário ao chat
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          text: text,
+          sender: 'user',
+          timestamp: new Date(),
+          isRead: true
+        }]);
+
+        // Ativar modo de atendimento humano
+        setIsHumanAttendance(true);
+
+        // Enviar notificação de solicitação de atendimento humano
+        await sendWebhookNotification('HUMAN_REQUESTED', text, {
+          status: 'pending',
+          requestType: 'human_attendance'
+        });
+
+        // Adicionar mensagem de confirmação
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          text: "Você foi transferido para um atendente humano. Em breve alguém irá te atender.",
+          sender: 'bot',
+          timestamp: new Date(),
+          isRead: true
+        }]);
+
+      } catch (error) {
+        console.error('Erro ao solicitar atendimento humano:', error);
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          text: "Desculpe, não foi possível conectar com um atendente no momento. Por favor, tente novamente mais tarde.",
+          sender: 'bot',
+          timestamp: new Date(),
+          isRead: true
+        }]);
+        setIsHumanAttendance(false);
+      }
+    } else {
+      // Para outras ações rápidas
+      setTimeout(() => {
+        sendMessage(text);
+      }, 100);
+    }
+  };
+
+  // Modificar a função sendMessage
+  const sendMessage = async (overrideText?: string) => {
+    const messageText = overrideText || inputValue;
+    
+    if (!messageText.trim()) return;
+    
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: messageText,
+      sender: 'user',
+      timestamp: new Date(),
+      isRead: true
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
+    if (!overrideText) setInputValue('');
+    setIsLoading(true);
+    
+    try {
+      // Enviar mensagem para o webhook com tipo apropriado
+      const response = await sendWebhookNotification(
+        isHumanAttendance ? 'HUMAN_MESSAGE' : 'BOT_MESSAGE',
+        messageText,
+        {
+          conversationId: userInfo?.email || 'anonymous',
+          messageId: userMessage.id
+        }
+      );
+
+      // Processar resposta
+      let botResponse = "";
+      
+      if (isHumanAttendance) {
+        // Se for atendimento humano, usar a resposta direta
+        botResponse = response.message || response.response || "Mensagem recebida";
+      } else {
+        // Se for bot, processar a resposta da Evolution API
+        try {
+          if (Array.isArray(response) && response.length > 0) {
+            const botData = response[0];
+            if (botData.result?.status?.message?.parts?.[0]?.text) {
+              botResponse = botData.result.status.message.parts[0].text;
+            } else if (botData.result?.artifacts?.[0]?.parts?.[0]?.text) {
+              botResponse = botData.result.artifacts[0].parts[0].text;
+            } else {
+              console.warn('Estrutura da resposta do bot não reconhecida:', botData);
+              botResponse = "Desculpe, não consegui processar a resposta corretamente.";
+            }
+          } else {
+            // Fallback para o formato antigo
+            botResponse = response.message || response.answer || "Desculpe, não entendi. Pode reformular?";
+          }
+        } catch (error) {
+          console.error('Erro ao processar resposta do bot:', error);
+          botResponse = "Desculpe, ocorreu um erro ao processar a resposta.";
+        }
+      }
+
+      // Adicionar a resposta às mensagens
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        text: botResponse,
+        sender: 'bot',
+        timestamp: new Date(),
+        isRead: isOpen
+      }]);
+
+    } catch (error) {
+      console.error('Erro ao enviar mensagem:', error);
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        text: "Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.",
+        sender: 'bot',
+        timestamp: new Date(),
+        isRead: isOpen
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Modificar a função toggleAttendanceMode
+  const toggleAttendanceMode = async () => {
+    const newMode = !isHumanAttendance;
+    setIsHumanAttendance(newMode);
+    
+    try {
+      // Notificar mudança de modo para ambos os webhooks
+      const notification = {
+        newMode: newMode ? 'human' : 'bot',
+        previousMode: newMode ? 'bot' : 'human'
+      };
+
+      // Notificar o webhook humano
+      await sendWebhookNotification('MODE_CHANGED', '', {
+        ...notification,
+        webhook: 'human'
+      });
+
+      // Notificar o webhook do bot
+      const currentWebhook = botWebhookUrl;
+      await fetch(currentWebhook, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'MODE_CHANGED',
+          message: '',
+          userId: userInfo?.email || 'visitor',
+          userName: userInfo?.name || 'Visitante',
+          userEmail: userInfo?.email,
+          timestamp: new Date(),
+          isHumanAttendance: newMode,
+          ...notification,
+          webhook: 'bot'
+        }),
+      });
+
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        text: `Modo de atendimento alterado para: ${newMode ? 'Humano' : 'Bot'}`,
+        sender: 'bot',
+        timestamp: new Date(),
+        isRead: true
+      }]);
+    } catch (error) {
+      console.error('Erro ao mudar modo de atendimento:', error);
+    }
   };
 
   // Função para tocar som de notificação
@@ -326,221 +609,6 @@ const ChatBot: React.FC<ChatBotProps> = ({
           isRead: true
         }
       ]);
-    }
-  };
-
-  const sendMessage = async (overrideText?: string) => {
-    const messageText = overrideText || inputValue;
-    
-    if (!messageText.trim()) return;
-    if (!webhookUrl) {
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        text: "Desculpe, não foi possível processar sua mensagem. O sistema não está configurado corretamente.",
-        sender: 'bot',
-        timestamp: new Date(),
-        isRead: true
-      }]);
-      return;
-    }
-    
-    if (isFirstInteraction) {
-      setIsFirstInteraction(false);
-    }
-    
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: messageText,
-      sender: 'user',
-      timestamp: new Date(),
-      isRead: true
-    };
-    
-    setMessages(prev => [...prev, userMessage]);
-    if (!overrideText) setInputValue('');
-    setIsLoading(true);
-    
-    try {
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: userMessage.text,
-          userId: userInfo?.email || 'visitor',
-          userName: userInfo?.name || 'Visitante',
-          userEmail: userInfo?.email,
-          timestamp: userMessage.timestamp
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Erro na requisição: ${response.status}`);
-      }
-
-      // Primeiro obtemos o texto da resposta
-      const rawResponseText = await response.text();
-      
-      // Verificamos se há conteúdo antes de tentar fazer o parse
-      if (!rawResponseText.trim()) {
-        throw new Error('Resposta vazia do servidor');
-      }
-
-      // Tentamos fazer o parse do JSON
-      let data;
-      try {
-        data = JSON.parse(rawResponseText);
-      } catch (e) {
-        console.error('Erro ao fazer parse da resposta:', rawResponseText);
-        throw new Error('Resposta inválida do servidor');
-      }
-      
-      // Processar a resposta do servidor no formato da Evolution API
-      let botResponse = "";
-      
-      try {
-        // Verificar se a resposta está no formato esperado
-        if (data?.jsonrpc === "2.0" && data?.result) {
-          console.log('Processando resposta da Evolution API'); // Debug
-          
-          // Tentar pegar a mensagem do status primeiro (mais recente)
-          if (data.result.status?.message?.parts?.[0]?.text) {
-            botResponse = data.result.status.message.parts[0].text;
-          }
-          // Se não encontrar no status, procurar no histórico
-          else if (data.result.history && Array.isArray(data.result.history)) {
-            const agentMessages = data.result.history.filter((msg: EvolutionApiMessage) => msg.role === 'agent');
-            if (agentMessages.length > 0) {
-              const lastAgentMessage = agentMessages[agentMessages.length - 1];
-              if (lastAgentMessage.parts?.[0]?.text) {
-                botResponse = lastAgentMessage.parts[0].text;
-              }
-            }
-          }
-          // Se ainda não encontrou, tentar nos artefatos
-          else if (data.result.artifacts && Array.isArray(data.result.artifacts)) {
-            const lastArtifact = data.result.artifacts[data.result.artifacts.length - 1];
-            if (lastArtifact.parts?.[0]?.text) {
-              botResponse = lastArtifact.parts[0].text;
-            }
-          }
-        }
-
-        // Se não encontrou resposta no formato esperado, tentar formatos alternativos
-        if (!botResponse) {
-          console.log('Tentando formatos alternativos...'); // Debug
-          
-          // Tentar extrair a resposta de diferentes formatos
-          const possibleResponses = [
-            // Formato Evolution API aninhado
-            data?.result?.status?.message?.parts?.[0]?.text,
-            data?.result?.artifacts?.[0]?.parts?.[0]?.text,
-            // Outros formatos possíveis
-            data?.response,
-            data?.message,
-            data?.answer,
-            data?.content,
-            // Busca recursiva por texto em objetos
-            typeof data === 'object' && data !== null ? 
-              Object.values(data).find(value => 
-                typeof value === 'string' && value.length > 20
-              ) : null
-          ].filter(Boolean); // Remover valores nulos/undefined
-
-          // Usar a resposta mais longa encontrada (provavelmente a mais relevante)
-          botResponse = possibleResponses.reduce((longest, current) => 
-            (current && current.length > longest.length) ? current : longest, '');
-        }
-
-        // Garantir que temos uma resposta válida e significativa
-        if (!botResponse || typeof botResponse !== 'string' || botResponse.length < 5) {
-          console.error('Resposta inválida ou muito curta:', botResponse);
-          throw new Error('Não foi possível extrair uma resposta válida dos dados recebidos');
-        }
-
-        console.log('Resposta final antes da formatação:', botResponse); // Debug
-        
-        // Tratar markdown básico e formatação
-        botResponse = botResponse
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Negrito
-        .replace(/\*(.*?)\*/g, '<em>$1</em>') // Itálico
-        .replace(/\n\s*\n/g, '</p><p>') // Parágrafos
-          .replace(/•\s+([^\n]+)/g, '<li>$1</li>') // Bullets
-          .replace(/(\d+)\.\s+([^\n]+)/g, '<li>$1. $2</li>') // Listas numeradas
-          .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>') // Links
-        .replace(/\n/g, '<br>'); // Quebras de linha simples
-      
-        // Adicionar tags de lista onde necessário
-        if (botResponse.includes('<li>')) {
-          botResponse = botResponse.replace(/((?:<li>.*?<\/li>)+)/g, '<ul class="list-disc pl-4 space-y-2">$1</ul>');
-        }
-        
-        // Garantir que o texto está envolto em parágrafos
-        if (!botResponse.startsWith('<p>')) {
-          botResponse = '<p>' + botResponse;
-        }
-        if (!botResponse.endsWith('</p>')) {
-          botResponse = botResponse + '</p>';
-        }
-
-        console.log('Resposta final formatada:', botResponse); // Debug
-      
-      // Dividir resposta longa em múltiplos cards
-        const messageParts = splitLongMessage(botResponse);
-      const seriesId = Date.now().toString();
-      
-      const botResponses: Message[] = messageParts.map((part, index) => ({
-        id: `${seriesId}-${index}`,
-        text: part,
-        sender: 'bot',
-          timestamp: new Date(Date.now() + index * 100),
-          isRead: isOpen,
-        isPartOfSeries: messageParts.length > 1,
-        seriesId: messageParts.length > 1 ? seriesId : undefined
-      }));
-      
-        // Evitar duplicação de mensagens
-        setMessages(prev => {
-          const uniqueResponses = botResponses.filter(newMsg => 
-            !prev.some(existingMsg => 
-              existingMsg.text === newMsg.text && 
-              existingMsg.timestamp.getTime() === newMsg.timestamp.getTime()
-            )
-          );
-          return [...prev, ...uniqueResponses];
-        });
-        
-      if (!isOpen) {
-        playNotificationSound();
-      }
-    } catch (error) {
-        console.error('Erro ao processar resposta:', error);
-      
-      const errorMessage: Message = {
-        id: Date.now().toString(),
-          text: error instanceof Error ? error.message : "Ocorreu um erro na comunicação. Por favor, tente novamente.",
-        sender: 'bot',
-        timestamp: new Date(),
-        isRead: isOpen
-      };
-      
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-      }
-    } catch (error) {
-      console.error('Erro ao enviar mensagem:', error);
-      
-      const errorMessage: Message = {
-        id: Date.now().toString(),
-        text: error instanceof Error ? error.message : "Ocorreu um erro na comunicação. Por favor, tente novamente mais tarde.",
-        sender: 'bot',
-        timestamp: new Date(),
-        isRead: isOpen
-      };
-      
-      setMessages(prev => [...prev, errorMessage]);
     }
   };
 
@@ -616,6 +684,17 @@ const ChatBot: React.FC<ChatBotProps> = ({
     };
   }, []);
 
+  // Adicionar logs para debug
+  useEffect(() => {
+    console.log('ChatBot Props:', {
+      evolutionApiUrl,
+      evolutionApiKey,
+      evolutionApiInstance,
+      webhookUrl,
+      botWebhookUrl
+    });
+  }, [evolutionApiUrl, evolutionApiKey, evolutionApiInstance, webhookUrl, botWebhookUrl]);
+
   return (
     <div className="fixed bottom-4 right-4 z-50">
       {/* Botão para abrir/fechar o chat */}
@@ -651,7 +730,12 @@ const ChatBot: React.FC<ChatBotProps> = ({
           >
             <div className="flex items-center">
               <BotAvatar />
-              <h3 className="font-medium text-xl md:text-base">{botName}</h3>
+              <div>
+                <h3 className="font-medium text-xl md:text-base">{botName}</h3>
+                <span className="text-xs opacity-75">
+                  {isHumanAttendance ? 'Atendimento Humano' : 'Atendimento Bot'}
+                </span>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
               <button 
@@ -668,6 +752,14 @@ const ChatBot: React.FC<ChatBotProps> = ({
                 aria-label="Fechar chat"
               >
                 <X size={isMobile ? 28 : 20} />
+              </button>
+              <button 
+                onClick={toggleAttendanceMode} 
+                className="text-white hover:text-gray-200 transition-colors p-2"
+                aria-label="Alternar modo de atendimento"
+                title="Alternar modo de atendimento"
+              >
+                {isHumanAttendance ? <Bot size={isMobile ? 24 : 16} /> : <User size={isMobile ? 24 : 16} />}
               </button>
             </div>
           </div>
