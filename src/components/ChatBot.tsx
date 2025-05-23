@@ -11,6 +11,12 @@ interface Message {
   seriesId?: string; // ID da série de mensagens relacionadas
 }
 
+interface WebhookMessage {
+  messageId: string;
+  message: string;
+  timestamp?: string;
+}
+
 interface UserInfo {
   name: string;
   email: string;
@@ -75,9 +81,9 @@ interface ChatBotProps {
 const CARD_CHAR_LIMIT = 200;
 
 const ChatBot: React.FC<ChatBotProps> = ({ 
-  webhookUrl = "https://press-n8n.jhkbgs.easypanel.host/webhook-test/notifica",
+  webhookUrl = "https://press-n8n.jhkbgs.easypanel.host/webhook/notifica",
   botWebhookUrl = "https://press-n8n.jhkbgs.easypanel.host/webhook/con-chat",
-  botName = "Legado Assistente",
+  botName = "Legado Assistente", 
   initialMessage = "Olá! Para iniciarmos nosso atendimento, poderia me informar seu nome e email?",
   primaryColor = "#1E40AF",
   botAvatar = "",
@@ -99,6 +105,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [showUserForm, setShowUserForm] = useState<boolean>(true);
   const [isHumanAttendance, setIsHumanAttendance] = useState<boolean>(false);
+  const [lastMessageId, setLastMessageId] = useState<string | null>(null);
   
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -371,7 +378,9 @@ const ChatBot: React.FC<ChatBotProps> = ({
   const sendWebhookNotification = async (type: string, message: string, additionalData = {}) => {
     try {
       // Determinar qual webhook usar baseado no modo de atendimento
-      const currentWebhook = isHumanAttendance ? webhookUrl : botWebhookUrl;
+      const currentWebhook = isHumanAttendance ? 
+        "https://press-n8n.jhkbgs.easypanel.host/webhook/notifica" : 
+        botWebhookUrl;
       
       console.log('Enviando para webhook:', currentWebhook, 'Modo:', isHumanAttendance ? 'Humano' : 'Bot');
       
@@ -386,7 +395,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
           userId: userInfo?.email || 'visitor',
           userName: userInfo?.name || 'Visitante',
           userEmail: userInfo?.email,
-          timestamp: new Date(),
+        timestamp: new Date(),
           isHumanAttendance,
           ...additionalData
         }),
@@ -409,24 +418,37 @@ const ChatBot: React.FC<ChatBotProps> = ({
     
     if (text === 'Gostaria de falar com um atendente humano.') {
       try {
-        // Adicionar mensagem do usuário ao chat
-        setMessages(prev => [...prev, {
-          id: Date.now().toString(),
-          text: text,
-          sender: 'user',
-          timestamp: new Date(),
-          isRead: true
-        }]);
-
-        // Ativar modo de atendimento humano
+        // Primeiro ativar modo de atendimento humano
         setIsHumanAttendance(true);
 
-        // Enviar notificação de solicitação de atendimento humano
-        await sendWebhookNotification('HUMAN_REQUESTED', text, {
-          status: 'pending',
-          requestType: 'human_attendance'
-        });
+        // Adicionar mensagem do usuário ao chat
+        setMessages(prev => [...prev, {
+      id: Date.now().toString(),
+          text: text,
+      sender: 'user',
+      timestamp: new Date(),
+      isRead: true
+        }]);
 
+        // Enviar notificação para o webhook humano
+        await fetch("https://press-n8n.jhkbgs.easypanel.host/webhook/notifica", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            type: 'HUMAN_REQUESTED',
+            message: text,
+          userId: userInfo?.email || 'visitor',
+          userName: userInfo?.name || 'Visitante',
+          userEmail: userInfo?.email,
+            timestamp: new Date(),
+            isHumanAttendance: true,
+            status: 'pending',
+            requestType: 'human_attendance'
+        }),
+      });
+      
         // Adicionar mensagem de confirmação
         setMessages(prev => [...prev, {
           id: Date.now().toString(),
@@ -455,7 +477,109 @@ const ChatBot: React.FC<ChatBotProps> = ({
     }
   };
 
-  // Modificar a função sendMessage
+  // Modificar função para verificar novas mensagens do webhook de resposta
+  const checkForNewMessages = async () => {
+    if (!isHumanAttendance || !userInfo?.email) return;
+
+    try {
+      // Usar POST com os dados no body
+      const response = await fetch("https://press-n8n.jhkbgs.easypanel.host/webhook/msgrecebe", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'mode': 'cors'
+        },
+        body: JSON.stringify({
+          userId: userInfo.email,
+          lastMessageId: lastMessageId || '',
+          type: 'CHECK_MESSAGES'
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Verificar se há novas mensagens
+        if (data.messages && Array.isArray(data.messages)) {
+          // Processar múltiplas mensagens se disponível
+          data.messages.forEach((msg: WebhookMessage) => {
+            if (msg.messageId && msg.messageId !== lastMessageId) {
+              setLastMessageId(msg.messageId);
+              setMessages(prev => [...prev, {
+                id: msg.messageId,
+                text: msg.message,
+                sender: 'bot',
+                timestamp: new Date(msg.timestamp || Date.now()),
+                isRead: isOpen
+              }]);
+
+              // Reproduzir som de notificação se o chat estiver minimizado
+              if (!isOpen) {
+                playNotificationSound();
+                setUnreadMessages(prev => prev + 1);
+              }
+            }
+          });
+        }
+        // Fallback para formato de mensagem única
+        else if (data.message && data.messageId && data.messageId !== lastMessageId) {
+          setLastMessageId(data.messageId);
+          setMessages(prev => [...prev, {
+            id: data.messageId,
+            text: data.message,
+            sender: 'bot',
+            timestamp: new Date(data.timestamp || Date.now()),
+            isRead: isOpen
+          }]);
+
+          // Reproduzir som de notificação se o chat estiver minimizado
+          if (!isOpen) {
+            playNotificationSound();
+            setUnreadMessages(prev => prev + 1);
+          }
+        }
+      } else {
+        console.warn('Resposta não ok do servidor:', response.status);
+      }
+    } catch (error) {
+      console.error('Erro ao verificar novas mensagens:', error);
+    }
+  };
+
+  // Modificar useEffect para polling de novas mensagens
+  useEffect(() => {
+    let pollInterval: NodeJS.Timeout;
+
+    if (isHumanAttendance && userInfo?.email) {
+      // Enviar informações do usuário apenas uma vez ao iniciar o modo humano
+      fetch("https://press-n8n.jhkbgs.easypanel.host/webhook/msgrecebe", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'mode': 'cors'
+        },
+        body: JSON.stringify({
+          userId: userInfo.email,
+          userName: userInfo.name,
+          userEmail: userInfo.email,
+          timestamp: new Date(),
+          type: 'INIT_HUMAN_CHAT'
+        }),
+      }).catch(error => console.error('Erro ao inicializar chat humano:', error));
+
+      // Iniciar polling apenas para verificar novas mensagens
+      pollInterval = setInterval(checkForNewMessages, 3000);
+    }
+
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
+  }, [isHumanAttendance, userInfo]);
+
+  // Modificar a função sendMessage para processar a resposta do bot
   const sendMessage = async (overrideText?: string) => {
     const messageText = overrideText || inputValue;
     
@@ -475,6 +599,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
     
     try {
       // Enviar mensagem para o webhook com tipo apropriado
+      console.log('Enviando mensagem para webhook:', isHumanAttendance ? 'humano' : 'bot');
       const response = await sendWebhookNotification(
         isHumanAttendance ? 'HUMAN_MESSAGE' : 'BOT_MESSAGE',
         messageText,
@@ -484,28 +609,59 @@ const ChatBot: React.FC<ChatBotProps> = ({
         }
       );
 
+      console.log('Resposta recebida do webhook:', response);
+
       // Processar resposta
       let botResponse = "";
       
       if (isHumanAttendance) {
-        // Se for atendimento humano, usar a resposta direta
-        botResponse = response.message || response.response || "Mensagem recebida";
+        // Se for atendimento humano, apenas confirmar o recebimento
+        botResponse = "Mensagem enviada para o atendente.";
       } else {
         // Se for bot, processar a resposta da Evolution API
         try {
-          if (Array.isArray(response) && response.length > 0) {
-            const botData = response[0];
-            if (botData.result?.status?.message?.parts?.[0]?.text) {
-              botResponse = botData.result.status.message.parts[0].text;
-            } else if (botData.result?.artifacts?.[0]?.parts?.[0]?.text) {
-              botResponse = botData.result.artifacts[0].parts[0].text;
-            } else {
-              console.warn('Estrutura da resposta do bot não reconhecida:', botData);
-              botResponse = "Desculpe, não consegui processar a resposta corretamente.";
+          console.log('Processando resposta do bot...');
+          
+          // Verificar se temos uma resposta válida da Evolution API
+          if (response?.result) {
+            const result = response.result;
+            console.log('Result:', result);
+            
+            // Tentar obter o texto da mensagem da status
+            if (result.status?.message?.parts?.[0]?.text) {
+              botResponse = result.status.message.parts[0].text;
+              console.log('Texto encontrado em status.message:', botResponse);
             }
-          } else {
-            // Fallback para o formato antigo
-            botResponse = response.message || response.answer || "Desculpe, não entendi. Pode reformular?";
+            // Se não encontrar no status, tentar nos artifacts
+            else if (result.artifacts?.[0]?.parts?.[0]?.text) {
+              botResponse = result.artifacts[0].parts[0].text;
+              console.log('Texto encontrado em artifacts:', botResponse);
+            }
+            // Se não encontrar em nenhum lugar específico, procurar no histórico
+            else if (result.history?.length > 0) {
+              const lastMessage = result.history[result.history.length - 1];
+              if (lastMessage.role === 'agent' && lastMessage.parts?.[0]?.text) {
+                botResponse = lastMessage.parts[0].text;
+                console.log('Texto encontrado no histórico:', botResponse);
+              }
+            }
+            
+            // Se ainda não encontrou, fazer uma busca genérica
+            if (!botResponse) {
+              console.log('Tentando busca genérica por texto na resposta');
+              const responseStr = JSON.stringify(result);
+              const matches = responseStr.match(/"text":"([^"]+)"/);
+              if (matches && matches[1]) {
+                botResponse = matches[1];
+                console.log('Texto encontrado em busca genérica:', botResponse);
+              }
+            }
+          }
+          
+          // Se ainda não temos uma resposta, usar mensagem padrão
+        if (!botResponse) {
+            console.warn('Não foi possível encontrar o texto da resposta:', response);
+            botResponse = "Desculpe, não consegui processar a resposta corretamente.";
           }
         } catch (error) {
           console.error('Erro ao processar resposta do bot:', error);
@@ -513,14 +669,16 @@ const ChatBot: React.FC<ChatBotProps> = ({
         }
       }
 
-      // Adicionar a resposta às mensagens
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        text: botResponse,
-        sender: 'bot',
-        timestamp: new Date(),
-        isRead: isOpen
-      }]);
+      // Adicionar a resposta às mensagens apenas se não for modo humano
+      if (!isHumanAttendance) {
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          text: botResponse,
+          sender: 'bot',
+          timestamp: new Date(),
+          isRead: isOpen
+        }]);
+      }
 
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
@@ -602,10 +760,10 @@ const ChatBot: React.FC<ChatBotProps> = ({
     if (confirm('Deseja limpar o histórico de conversa?')) {
       setMessages([
         {
-          id: Date.now().toString(),
+        id: Date.now().toString(),
           text: initialMessage,
-          sender: 'bot',
-          timestamp: new Date(),
+        sender: 'bot',
+        timestamp: new Date(),
           isRead: true
         }
       ]);
@@ -731,7 +889,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
             <div className="flex items-center">
               <BotAvatar />
               <div>
-                <h3 className="font-medium text-xl md:text-base">{botName}</h3>
+              <h3 className="font-medium text-xl md:text-base">{botName}</h3>
                 <span className="text-xs opacity-75">
                   {isHumanAttendance ? 'Atendimento Humano' : 'Atendimento Bot'}
                 </span>

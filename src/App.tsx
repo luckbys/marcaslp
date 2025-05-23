@@ -1037,7 +1037,7 @@ function App() {
 
       {/* ChatBot */}
       <ChatBot 
-        webhookUrl={import.meta.env.VITE_WEBHOOK_URL}
+        webhookUrl="https://press-n8n.jhkbgs.easypanel.host/webhook-test/notifica"
         botWebhookUrl="https://press-n8n.jhkbgs.easypanel.host/webhook/con-chat"
         evolutionApiUrl={import.meta.env.VITE_EVOLUTION_API_URL}
         evolutionApiKey={import.meta.env.VITE_EVOLUTION_API_KEY}
