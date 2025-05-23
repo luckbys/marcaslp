@@ -106,6 +106,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
   const [showUserForm, setShowUserForm] = useState<boolean>(true);
   const [isHumanAttendance, setIsHumanAttendance] = useState<boolean>(false);
   const [lastMessageId, setLastMessageId] = useState<string | null>(null);
+  const [showQuickActions, setShowQuickActions] = useState<boolean>(true);
   
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -415,6 +416,7 @@ const ChatBot: React.FC<ChatBotProps> = ({
   // Modificar a função handleQuickAction
   const handleQuickAction = async (text: string) => {
     setInputValue(text);
+    setShowQuickActions(false);
     
     if (text === 'Gostaria de falar com um atendente humano.') {
       try {
@@ -584,6 +586,9 @@ const ChatBot: React.FC<ChatBotProps> = ({
     const messageText = overrideText || inputValue;
     
     if (!messageText.trim()) return;
+    
+    // Esconder perguntas frequentes após primeira mensagem
+    setShowQuickActions(false);
     
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -818,14 +823,6 @@ const ChatBot: React.FC<ChatBotProps> = ({
     return isLastInSeries;
   };
 
-  // Ajustar a animação de entrada das mensagens para uma transição mais suave
-  const messageSlideAnimation = `
-    @keyframes messageSlide {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  `;
-
   // Detectar se é um dispositivo móvel
   useEffect(() => {
     const checkMobile = () => {
@@ -883,41 +880,50 @@ const ChatBot: React.FC<ChatBotProps> = ({
         >
           {/* Cabeçalho do chat */}
           <div 
-            className="p-4 flex justify-between items-center text-white"
-            style={{ backgroundColor: primaryColor }}
+            className="p-4 flex justify-between items-center text-white relative"
+            style={{ 
+              backgroundColor: primaryColor,
+              borderBottom: '1px solid rgba(255,255,255,0.1)'
+            }}
           >
             <div className="flex items-center">
-              <BotAvatar />
+              <div className="relative">
+                <BotAvatar />
+                <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 border-2 border-white rounded-full"></span>
+              </div>
               <div>
-              <h3 className="font-medium text-xl md:text-base">{botName}</h3>
-                <span className="text-xs opacity-75">
-                  {isHumanAttendance ? 'Atendimento Humano' : 'Atendimento Bot'}
-                </span>
+                <h3 className="font-semibold text-xl md:text-base">{botName}</h3>
+                <div className="flex items-center">
+                  <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                  <span className="text-xs opacity-90">
+                    {isHumanAttendance ? 'Atendimento Humano' : 'Online'}
+                  </span>
+                </div>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
               <button 
                 onClick={clearConversation} 
-                className="text-white hover:text-gray-200 transition-colors p-2"
+                className="hover:bg-white/10 rounded-full p-2 transition-all duration-200"
                 aria-label="Limpar conversa"
                 title="Limpar conversa"
               >
-                <Trash2 size={isMobile ? 24 : 16} />
-              </button>
-              <button 
-                onClick={toggleChat} 
-                className="text-white hover:text-gray-200 transition-colors p-2"
-                aria-label="Fechar chat"
-              >
-                <X size={isMobile ? 28 : 20} />
+                <Trash2 size={isMobile ? 22 : 16} />
               </button>
               <button 
                 onClick={toggleAttendanceMode} 
-                className="text-white hover:text-gray-200 transition-colors p-2"
+                className="hover:bg-white/10 rounded-full p-2 transition-all duration-200"
                 aria-label="Alternar modo de atendimento"
                 title="Alternar modo de atendimento"
               >
-                {isHumanAttendance ? <Bot size={isMobile ? 24 : 16} /> : <User size={isMobile ? 24 : 16} />}
+                {isHumanAttendance ? <Bot size={isMobile ? 22 : 16} /> : <User size={isMobile ? 22 : 16} />}
+              </button>
+              <button 
+                onClick={toggleChat} 
+                className="hover:bg-white/10 rounded-full p-2 transition-all duration-200"
+                aria-label="Fechar chat"
+              >
+                <X size={isMobile ? 24 : 18} />
               </button>
             </div>
           </div>
@@ -927,7 +933,8 @@ const ChatBot: React.FC<ChatBotProps> = ({
             className="flex-1 p-4 overflow-y-auto bg-gray-50"
             style={{ 
               height: isMobile ? 'calc(100vh - 180px)' : 'auto',
-              maxHeight: isMobile ? 'calc(100vh - 180px)' : '400px'
+              maxHeight: isMobile ? 'calc(100vh - 180px)' : '400px',
+              backgroundImage: 'linear-gradient(to right, rgba(229, 231, 235, 0.2) 0%, rgba(229, 231, 235, 0.1) 100%)'
             }}
             onScroll={handleScroll}
             ref={chatContainerRef}
@@ -1010,97 +1017,131 @@ const ChatBot: React.FC<ChatBotProps> = ({
               return (
                 <div
                   key={msg.id}
-                  className={`mb-4 flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} animate-messageSlide`}
+                  className={`mb-4 flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'} animate-messageSlide group`}
                   style={{ 
                     animationDelay: `${index * 0.1}s`,
                     opacity: 0,
-                    animation: 'messageSlide 0.3s ease-out forwards'
                   }}
+                  data-sender={msg.sender}
                 >
-                  {msg.sender === 'bot' && (!isSeriesContinuation || showAvatarAndTime) && <BotAvatar />}
+                  {msg.sender === 'bot' && (!isSeriesContinuation || showAvatarAndTime) && (
+                    <div className="relative">
+                      <BotAvatar />
+                      <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-400 border-2 border-white rounded-full"></span>
+                    </div>
+                  )}
                   {msg.sender === 'bot' && isSeriesContinuation && !showAvatarAndTime && <div className="w-8 mr-2" />}
                   
                   <div
-                    className={`max-w-[85%] md:max-w-[75%] rounded-lg px-4 py-3 shadow-sm ${
+                    className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-4 py-3 shadow-sm transition-all duration-200 ${
                       msg.sender === 'user'
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-white text-gray-800 border border-gray-200'
-                    }`}
+                        ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white hover:shadow-md'
+                        : 'bg-white text-gray-800 border border-gray-100 hover:border-gray-200 hover:shadow-md'
+                    } ${isSeriesContinuation ? 'mt-1' : 'mt-0'}`}
                   >
                     <div 
                       dangerouslySetInnerHTML={{ __html: formatMessage(msg.text) }} 
                       className="text-base md:text-sm whitespace-pre-wrap break-words leading-relaxed"
                     />
+                    <div className={`text-xs mt-1 opacity-0 group-hover:opacity-70 transition-opacity ${
+                      msg.sender === 'user' ? 'text-white/70' : 'text-gray-400'
+                    }`}>
+                      {formatTime(msg.timestamp)}
+                    </div>
                   </div>
                   
-                  {msg.sender === 'user' && (!isSeriesContinuation || showAvatarAndTime) && <UserAvatar />}
+                  {msg.sender === 'user' && (!isSeriesContinuation || showAvatarAndTime) && (
+                    <div className="relative">
+                      <UserAvatar />
+                      <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-400 border-2 border-white rounded-full"></span>
+                    </div>
+                  )}
                   {msg.sender === 'user' && isSeriesContinuation && !showAvatarAndTime && <div className="w-8 ml-2" />}
                 </div>
               );
             })}
             
+            {/* Botões de ação rápida - Layout grid em mobile */}
+            {isFirstInteraction && showQuickActions && (
+              <div className="px-4 py-3 bg-white border-t border-gray-100">
+                <p className="text-sm text-gray-600 mb-3 font-medium">Perguntas frequentes:</p>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {quickActions.map(action => (
+                    <button
+                      key={action.id}
+                      onClick={action.action}
+                      className="bg-gray-50 hover:bg-gray-100 text-gray-700 text-sm px-4 py-2.5 rounded-xl transition-all duration-200 border border-gray-100 hover:border-gray-200 hover:shadow-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      {action.id === 'q1' && <MessageSquare size={16} className="text-blue-500" />}
+                      {action.id === 'q2' && <RefreshCw size={16} className="text-green-500" />}
+                      {action.id === 'q3' && <Volume2 size={16} className="text-purple-500" />}
+                      {action.id === 'q4' && <User size={16} className="text-orange-500" />}
+                      {action.text}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Indicador de digitação */}
             {isLoading && (
-              <div className="flex justify-start mb-3 items-start">
-                <BotAvatar />
-                <div className="bg-white text-gray-800 rounded-lg px-4 py-3 border border-gray-200 shadow-sm">
+              <div className="flex justify-start mb-3 items-start animate-fadeIn">
+                <div className="relative">
+                  <BotAvatar />
+                  <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-400 border-2 border-white rounded-full"></span>
+                </div>
+                <div className="bg-white text-gray-800 rounded-2xl px-4 py-3 border border-gray-100 shadow-sm ml-2 max-w-[85%] md:max-w-[75%]">
                   <div className="flex space-x-2 items-center">
-                    <div className="text-sm text-gray-500 mr-2">Digitando</div>
-                    <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce"></div>
-                    <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                    <div className="text-sm text-gray-500">Digitando</div>
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                    </div>
                   </div>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Botões de ação rápida - Layout grid em mobile */}
-          {isFirstInteraction && (
-            <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
-              <p className="text-base md:text-sm text-gray-500 mb-3">Perguntas frequentes:</p>
-              <div className="grid grid-cols-2 gap-3">
-                {quickActions.map(action => (
-                  <button
-                    key={action.id}
-                    onClick={action.action}
-                    className="bg-gray-200 hover:bg-gray-300 text-gray-800 text-base md:text-sm px-4 py-3 md:py-2 rounded-xl transition-colors w-full text-center"
-                  >
-                    {action.text}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Área de input - Otimizada para mobile */}
-          <div className="p-4 bg-white border-t border-gray-200">
-            <div className="flex items-center gap-2">
-              <input
-                ref={inputRef}
-                type="text"
-                placeholder="Digite sua mensagem..."
-                className="flex-1 px-4 py-3 md:py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
-                disabled={isLoading}
-              />
+          <div className="p-4 bg-white border-t border-gray-100 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  placeholder="Digite sua mensagem..."
+                  className="w-full px-4 py-3 md:py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base bg-gray-50 hover:bg-gray-100 transition-all duration-200"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  disabled={isLoading}
+                />
+                {isLoading && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+                  </div>
+                )}
+              </div>
               <button
-                className="text-white p-3 rounded-xl flex items-center justify-center disabled:opacity-50 transition-all h-12 w-12 md:h-10 md:w-10"
-                style={{ backgroundColor: isLoading || !inputValue.trim() ? '#9CA3AF' : primaryColor }}
+                className="text-white p-3 rounded-xl flex items-center justify-center disabled:opacity-50 transition-all duration-200 hover:scale-105 active:scale-95 disabled:hover:scale-100"
+                style={{ 
+                  backgroundColor: isLoading || !inputValue.trim() ? '#9CA3AF' : primaryColor,
+                  boxShadow: isLoading || !inputValue.trim() ? 'none' : '0 2px 8px rgba(0,0,0,0.1)'
+                }}
                 onClick={() => sendMessage()}
                 disabled={isLoading || !inputValue.trim()}
               >
-                <Send size={isMobile ? 24 : 18} />
+                <Send size={isMobile ? 22 : 18} className={isLoading ? 'opacity-0' : 'opacity-100'} />
               </button>
             </div>
           </div>
           
           {/* Rodapé */}
-          <div className="px-4 py-3 md:py-2 bg-gray-50 border-t border-gray-200">
-            <p className="text-sm text-gray-400 text-center">
-              Powered by Legado Marcas e Patentes
+          <div className="px-4 py-2.5 bg-white border-t border-gray-100">
+            <p className="text-xs text-gray-400 text-center flex items-center justify-center gap-1">
+              Powered by <span className="font-medium text-gray-500">Legado Marcas e Patentes</span>
             </p>
           </div>
         </div>
@@ -1110,10 +1151,10 @@ const ChatBot: React.FC<ChatBotProps> = ({
       {showScrollButton && (
         <button
           onClick={scrollToBottom}
-          className="fixed bottom-28 right-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-3 shadow-lg transition-all duration-300 hover:scale-110 z-50"
+          className="fixed bottom-28 right-6 bg-white hover:bg-gray-50 text-gray-600 rounded-full p-3 shadow-lg transition-all duration-300 hover:scale-110 z-50 border border-gray-100 group"
           aria-label="Rolar para baixo"
         >
-          <ArrowDown size={isMobile ? 24 : 20} />
+          <ArrowDown size={isMobile ? 22 : 18} className="group-hover:text-blue-500 transition-colors" />
         </button>
       )}
 
@@ -1121,19 +1162,62 @@ const ChatBot: React.FC<ChatBotProps> = ({
         @keyframes fadeIn {
           from {
             opacity: 0;
-            transform: ${isMobile ? 'translateY(100%)' : 'translateY(10px)'};
+            transform: ${isMobile ? 'translateY(100%)' : 'scale(0.95) translateY(10px)'};
           }
           to {
             opacity: 1;
-            transform: translateY(0);
+            transform: ${isMobile ? 'translateY(0)' : 'scale(1) translateY(0)'};
           }
         }
-        
-        ${messageSlideAnimation}
-        
+
+        @keyframes messageSlideUser {
+          from {
+            opacity: 0;
+            transform: translateX(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        @keyframes messageSlideBot {
+          from {
+            opacity: 0;
+            transform: translateX(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        .animate-messageSlide[data-sender='user'] {
+          animation: messageSlideUser 0.3s ease-out forwards;
+        }
+
+        .animate-messageSlide[data-sender='bot'] {
+          animation: messageSlideBot 0.3s ease-out forwards;
+        }
+
+        .animate-pulse {
+          animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.1);
+            opacity: 0.8;
+          }
+        }
+
         .text-base p, .text-sm p {
-          margin-bottom: ${isMobile ? '1rem' : '0.75rem'};
-          line-height: 1.5;
+          margin-bottom: ${isMobile ? '0.75rem' : '0.5rem'};
+          line-height: 1.6;
         }
         
         .text-base p:last-child, .text-sm p:last-child {
@@ -1177,8 +1261,8 @@ const ChatBot: React.FC<ChatBotProps> = ({
           }
 
           .quick-actions button {
-            padding: 12px 16px;
-            font-size: 1rem;
+            padding: 12px;
+            font-size: 0.9375rem;
           }
 
           .form-container {
@@ -1189,6 +1273,19 @@ const ChatBot: React.FC<ChatBotProps> = ({
             font-size: 16px;
             padding: 12px;
           }
+        }
+
+        /* Animações suaves para hover */
+        .hover-scale {
+          transition: transform 0.2s ease-out;
+        }
+
+        .hover-scale:hover {
+          transform: scale(1.02);
+        }
+
+        .hover-scale:active {
+          transform: scale(0.98);
         }
       `}</style>
     </div>
